@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Pengurusan Panitia & OPPM KPM Standard - Executive Edition</title>
+    <title>Sistem Pengurusan Panitia & OPPM KPM Standard - Cloud Edition</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Supabase JS SDK v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         
@@ -76,470 +78,643 @@
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 transition-all duration-300">
 
-    <!-- HEADER BAR EXECUTIVE UI -->
-    <header class="no-print bg-gradient-to-r from-slate-950 via-indigo-950 to-purple-950 text-white sticky top-0 z-40 shadow-xl border-b border-indigo-500/20">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center space-x-3">
-                <div id="headerLogoContainer" class="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center p-1 border border-white/20 shadow-inner">
-                    <img id="headerLogoImg" src="https://upload.wikimedia.org/wikipedia/commons/9/9c/Coat_of_arms_of_Malaysia.svg" alt="Logo KPM" class="max-h-full max-w-full object-contain">
+    <!-- ==================== LOGIN GATEKEEPER MODAL ==================== -->
+    <div id="loginScreen" class="fixed inset-0 z-50 bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-3xl shadow-2xl border border-white/20 p-6 md:p-8 my-auto">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 mx-auto flex items-center justify-center p-2 mb-3 shadow-inner">
+                    <img id="loginLogoImg" src="https://upload.wikimedia.org/wikipedia/commons/9/9c/Coat_of_arms_of_Malaysia.svg" alt="Logo" class="max-h-full max-w-full object-contain">
                 </div>
-                <div>
-                    <h1 class="font-extrabold text-base md:text-lg leading-tight tracking-wide drop-shadow-sm flex items-center gap-2">
-                        Sistem Panitia KPM <span class="text-[10px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full font-black uppercase">Executive + OPPM</span>
-                    </h1>
-                    <p class="text-xs text-indigo-200 font-medium">Perancangan Strategik, Pelan Taktikal, OPPM & Pelan Operasi</p>
-                </div>
+                <h1 id="loginSchoolTitle" class="text-lg font-extrabold text-slate-900 uppercase tracking-tight">SISTEM PENGURUSAN PANITIA KPM</h1>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Perancangan Strategik, OPPM & Pelan Operasi (Cloud Supabase)</p>
             </div>
 
-            <!-- VIEWPORT SWITCHER -->
-            <div class="flex items-center bg-white/10 backdrop-blur-md p-1 rounded-xl border border-white/15 text-xs">
-                <button id="btnDesktopView" onclick="setViewportMode('desktop')" class="px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 bg-indigo-600 text-white shadow-md transition">
-                    <i class="fa-solid fa-desktop"></i>
-                    <span class="hidden sm:inline">Komputer</span>
-                </button>
-                <button id="btnMobileView" onclick="setViewportMode('mobile')" class="px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 text-white/70 hover:text-white transition">
-                    <i class="fa-solid fa-mobile-screen"></i>
-                    <span class="hidden sm:inline">Mobil (390px)</span>
-                </button>
+            <!-- Configuration Warning if URL/Key not set -->
+            <div id="configWarningBanner" class="hidden mb-4 p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-[11px]">
+                <p class="font-extrabold flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Konfigurasi Supabase Diperlukan</p>
+                <p class="mt-1">Sila masukkan <b>SUPABASE_URL</b> dan <b>SUPABASE_ANON_KEY</b> di bahagian atas kod JavaScript sebelum menggunakan sistem.</p>
             </div>
 
-            <!-- QUICK ACTIONS -->
-            <div class="flex items-center space-x-2 text-xs">
-                <button onclick="exportJSON()" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white font-semibold transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-download"></i> Eksport
+            <!-- Role Switcher -->
+            <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-2xl mb-5 text-xs font-extrabold">
+                <button type="button" id="roleTabKP" onclick="switchLoginRole('kp')" class="py-2.5 rounded-xl bg-indigo-600 text-white shadow transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-chalkboard-user"></i> Ketua Panitia
                 </button>
-                <button onclick="document.getElementById('importFile').click()" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white font-semibold transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-upload"></i> Import
-                </button>
-                <input type="file" id="importFile" class="hidden" accept=".json" onchange="importJSON(event)">
-                <button onclick="window.print()" class="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold rounded-lg shadow-md transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-print"></i> Cetak A4 PDF
+                <button type="button" id="roleTabAdmin" onclick="switchLoginRole('admin')" class="py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-user-shield"></i> Pentadbir (Admin)
                 </button>
             </div>
-        </div>
-    </header>
 
-    <!-- MAIN APP CONTAINER -->
-    <div id="appContainer" class="max-w-7xl mx-auto px-4 py-6 transition-all duration-300">
-        
-        <div id="mobileNotch" class="mobile-notch hidden"></div>
-
-        <!-- STATS BOARD EXECUTIVE CARD -->
-        <div class="no-print grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-                <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
-                    <span>JUMLAH BAJET TAKTIKAL</span>
-                    <i class="fa-solid fa-sack-dollar text-emerald-600"></i>
-                </div>
-                <div id="stat-bajet" class="text-lg md:text-xl font-extrabold text-slate-800">RM 0.00</div>
-            </div>
-            <div class="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-                <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
-                    <span>PROGRAM TAKTIKAL</span>
-                    <i class="fa-solid fa-list-check text-blue-600"></i>
-                </div>
-                <div id="stat-program" class="text-lg md:text-xl font-extrabold text-slate-800">0 Program</div>
-            </div>
-            <div class="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-                <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
-                    <span>PURATA ETR SASARAN</span>
-                    <i class="fa-solid fa-chart-line text-purple-600"></i>
-                </div>
-                <div id="stat-etr" class="text-lg md:text-xl font-extrabold text-slate-800">0%</div>
-            </div>
-            <div class="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-                <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
-                    <span>SUBJEK AKTIF</span>
-                    <i class="fa-solid fa-book-open text-amber-600"></i>
-                </div>
-                <div id="stat-subjek" class="text-xs font-extrabold text-indigo-700 truncate">Bahasa Melayu</div>
-            </div>
-        </div>
-
-        <!-- MODULE TABS NAVIGATION -->
-        <nav class="no-print bg-white/90 backdrop-blur-md rounded-2xl shadow-md border border-slate-200 p-2 mb-6 flex flex-wrap gap-1">
-            <button onclick="switchTab('profil')" id="tab-profil" class="nav-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-indigo-600 bg-indigo-50 border border-indigo-200 shadow-sm">
-                <i class="fa-solid fa-school text-indigo-600"></i> Profil & Logo
-            </button>
-            <button onclick="switchTab('swot')" id="tab-swot" class="nav-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
-                <i class="fa-solid fa-table-cells-large text-emerald-600"></i> SWOT/SWOC
-            </button>
-            <button onclick="switchTab('strategik')" id="tab-strategik" class="nav-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
-                <i class="fa-solid fa-bullseye text-purple-600"></i> Pelan Strategik
-            </button>
-            <button onclick="switchTab('taktikal')" id="tab-taktikal" class="nav-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
-                <i class="fa-solid fa-list-check text-amber-600"></i> Pelan Taktikal
-            </button>
-            <button onclick="switchTab('oppm')" id="tab-oppm" class="nav-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
-                <i class="fa-solid fa-chart-gantt text-rose-600"></i> OPPM Board
-            </button>
-            <button onclick="switchTab('operasi')" id="tab-operasi" class="nav-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
-                <i class="fa-solid fa-sliders text-cyan-600"></i> Pelan Operasi (1:1)
-            </button>
-            <button onclick="switchTab('cetak')" id="tab-cetak" class="nav-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
-                <i class="fa-solid fa-file-invoice text-slate-700"></i> Pratinjau Dokumen
-            </button>
-        </nav>
-
-        <!-- SECTION 1: PROFIL & LOGO -->
-        <section id="sec-profil" class="tab-content space-y-6">
-            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
-                <div class="flex items-center justify-between mb-5 border-b pb-3">
-                    <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2.5">
-                        <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center"><i class="fa-solid fa-school"></i></span>
-                        Profil Panitia & Muat Naik Logo Sekolah
-                    </h2>
-                    <span class="text-xs bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-bold">Standard KPM</span>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-gradient-to-b from-indigo-50/70 to-slate-50 rounded-2xl p-5 border border-indigo-100 flex flex-col items-center justify-center text-center shadow-inner">
-                        <div class="relative group mb-3">
-                            <div class="w-32 h-32 rounded-2xl bg-white border-2 border-indigo-200 shadow-md flex items-center justify-center overflow-hidden p-2">
-                                <img id="schoolLogoPreview" src="https://upload.wikimedia.org/wikipedia/commons/9/9c/Coat_of_arms_of_Malaysia.svg" alt="Preview Logo" class="max-h-full max-w-full object-contain">
-                            </div>
-                            <label for="logoInput" class="absolute inset-0 bg-indigo-950/70 text-white rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition">
-                                <i class="fa-solid fa-camera text-2xl mb-1 text-amber-400"></i>
-                                <span class="text-xs font-bold">Muat Naik Logo</span>
-                            </label>
-                            <input type="file" id="logoInput" accept="image/*" class="hidden" onchange="handleLogoUpload(event)">
-                        </div>
-                        <p class="text-xs font-bold text-slate-700 mb-1">Muat Naik Logo Sekolah (PNG/JPG)</p>
-                        <button onclick="resetLogo()" class="text-[11px] text-rose-600 hover:text-rose-800 font-semibold underline">Reset Logo Default</button>
-                    </div>
-
-                    <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Nama Sekolah</label>
-                            <input type="text" id="cfg-namaSekolah" oninput="saveData()" class="w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800" value="SK TAMAN MENTARI">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Kod Sekolah / Kod Panitia</label>
-                            <input type="text" id="cfg-kodSekolah" oninput="saveData()" class="w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800" value="MBA1024">
-                        </div>
-                        <div class="sm:col-span-2">
-                            <label class="block font-bold text-indigo-900 mb-1">Pilih Mata Pelajaran (Semua 30+ Subjek KPM SK / SMK)</label>
-                            <select id="cfg-subjek" onchange="onSubjectChange()" class="w-full p-2.5 border-2 border-indigo-400 rounded-xl bg-indigo-50 text-indigo-950 font-extrabold focus:ring-2 focus:ring-indigo-500">
-                                <optgroup label="Sekolah Rendah (SK / SJK)">
-                                    <option value="Bahasa Melayu (SK)">Bahasa Melayu (SK)</option>
-                                    <option value="Bahasa Melayu (SJKC/SJKT)">Bahasa Melayu (SJKC/SJKT)</option>
-                                    <option value="Bahasa Inggeris">Bahasa Inggeris</option>
-                                    <option value="Matematik">Matematik</option>
-                                    <option value="Sains">Sains</option>
-                                    <option value="Sejarah">Sejarah</option>
-                                    <option value="Pendidikan Islam">Pendidikan Islam</option>
-                                    <option value="Pendidikan Moral">Pendidikan Moral</option>
-                                    <option value="Reka Bentuk & Teknologi (RBT)">Reka Bentuk & Teknologi (RBT)</option>
-                                    <option value="Pendidikan Jasmani & Kesihatan (PJPK)">PJPK</option>
-                                    <option value="Pendidikan Seni Visual (PSV)">Pendidikan Seni Visual (PSV)</option>
-                                    <option value="Pendidikan Muzik">Pendidikan Muzik</option>
-                                    <option value="Bahasa Arab">Bahasa Arab</option>
-                                    <option value="Bahasa Cina (SJKC/SK)">Bahasa Cina</option>
-                                    <option value="Bahasa Tamil (SJKT/SK)">Bahasa Tamil</option>
-                                </optgroup>
-                                <optgroup label="Sekolah Menengah (SMK)">
-                                    <option value="Bahasa Melayu (SMK)">Bahasa Melayu (SMK)</option>
-                                    <option value="Bahasa Inggeris (SMK)">Bahasa Inggeris (SMK)</option>
-                                    <option value="Matematik (SMK)">Matematik (SMK)</option>
-                                    <option value="Sains (SMK)">Sains (SMK)</option>
-                                    <option value="Sejarah (SMK)">Sejarah (SMK)</option>
-                                    <option value="Pendidikan Islam (SMK)">Pendidikan Islam (SMK)</option>
-                                    <option value="Pendidikan Moral (SMK)">Pendidikan Moral (SMK)</option>
-                                    <option value="PJPK (SMK)">PJPK (SMK)</option>
-                                    <option value="PSV (SMK)">PSV (SMK)</option>
-                                    <option value="Geografi (SMK)">Geografi (SMK)</option>
-                                    <option value="RBT (SMK)">RBT (SMK)</option>
-                                    <option value="Asas Sains Komputer (ASK)">Asas Sains Komputer (ASK)</option>
-                                    <option value="Sains Komputer">Sains Komputer</option>
-                                    <option value="Matematik Tambahan (Add Math)">Matematik Tambahan (Add Math)</option>
-                                    <option value="Fizik">Fizik</option>
-                                    <option value="Kimia">Kimia</option>
-                                    <option value="Biologi">Biologi</option>
-                                    <option value="Prinsip Perakaunan">Prinsip Perakaunan</option>
-                                    <option value="Ekonomi">Ekonomi</option>
-                                    <option value="Perniagaan">Perniagaan</option>
-                                    <option value="Sains Rumah Tangga (SRT)">Sains Rumah Tangga (SRT)</option>
-                                    <option value="Pertanian">Pertanian</option>
-                                    <option value="Grafik Komunikasi Teknikal (GKT)">Grafik Komunikasi Teknikal (GKT)</option>
-                                    <option value="Bahasa Arab (SMK)">Bahasa Arab (SMK)</option>
-                                    <option value="Bahasa Cina (SMK)">Bahasa Cina (SMK)</option>
-                                    <option value="Bahasa Tamil (SMK)">Bahasa Tamil (SMK)</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                        <div class="sm:col-span-2">
-                            <label class="block font-bold text-slate-700 mb-1">Tahun Perancangan Strategik</label>
-                            <input type="text" id="cfg-tahunStrategik" oninput="saveData()" class="w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800" value="2024 - 2027">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CARTA ORGANISASI ROSTER -->
-            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
-                <h3 class="text-base font-extrabold text-slate-800 mb-4 flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center"><i class="fa-solid fa-sitemap"></i></span>
-                    Carta Organisasi Panitia (5-Tingkat Standard KPM)
-                </h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">Pengetua / Guru Besar</label>
-                        <input type="text" id="cfg-pengetua" oninput="saveData()" class="w-full p-2.5 border rounded-xl" value="Dato' Hj. Ahmad bin Harun">
-                    </div>
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">GPK Pentadbiran & Kurikulum</label>
-                        <input type="text" id="cfg-gpk" oninput="saveData()" class="w-full p-2.5 border rounded-xl" value="Puan Siti Zubaidah binti Abdullah">
-                    </div>
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">Ketua Panitia</label>
-                        <input type="text" id="cfg-ketuaPanitia" oninput="saveData()" class="w-full p-2.5 border rounded-xl font-bold text-indigo-700" value="Encik Mohd Ridzuan bin Bakar">
-                    </div>
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">Penolong Ketua Panitia</label>
-                        <input type="text" id="cfg-penolongKP" oninput="saveData()" class="w-full p-2.5 border rounded-xl" value="Cik Nurul Huda binti Ismail">
-                    </div>
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">Setiausaha Panitia</label>
-                        <input type="text" id="cfg-setiausaha" oninput="saveData()" class="w-full p-2.5 border rounded-xl" value="Puan Khadijah binti Rahman">
-                    </div>
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">AJK Guru Subjek</label>
-                        <input type="text" id="cfg-ajk" oninput="saveData()" class="w-full p-2.5 border rounded-xl" value="Semua Guru Mata Pelajaran">
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION 2: SWOT / SWOC -->
-        <section id="sec-swot" class="tab-content hidden space-y-6">
-            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
-                <div class="flex items-center justify-between mb-5 border-b pb-3">
-                    <div>
-                        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-                            <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center"><i class="fa-solid fa-table-cells-large"></i></span>
-                            Analisis SWOT / SWOC Panitia
-                        </h2>
-                        <p class="text-xs text-slate-500 font-medium">Kekuatan (S), Kelemahan (W), Peluang (O), Cabaran (C)</p>
-                    </div>
-                    <button onclick="loadSWOTTemplate()" class="text-xs px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 rounded-xl font-bold shadow transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Load Templat Subjek
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-                    <div class="bg-gradient-to-br from-emerald-500 to-teal-600 p-0.5 rounded-2xl shadow-sm">
-                        <div class="bg-white p-4 rounded-[14px]">
-                            <label class="block font-extrabold text-emerald-800 text-sm mb-2 flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">S</span> KEKUATAN (STRENGTHS)
-                            </label>
-                            <textarea id="swot-s" oninput="saveData()" rows="5" class="w-full p-3 border border-emerald-200 rounded-xl bg-emerald-50/30 text-slate-700 font-medium focus:ring-2 focus:ring-emerald-500"></textarea>
-                        </div>
-                    </div>
-                    <div class="bg-gradient-to-br from-amber-500 to-orange-600 p-0.5 rounded-2xl shadow-sm">
-                        <div class="bg-white p-4 rounded-[14px]">
-                            <label class="block font-extrabold text-amber-800 text-sm mb-2 flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs">W</span> KELEMAHAN (WEAKNESSES)
-                            </label>
-                            <textarea id="swot-w" oninput="saveData()" rows="5" class="w-full p-3 border border-amber-200 rounded-xl bg-amber-50/30 text-slate-700 font-medium focus:ring-2 focus:ring-amber-500"></textarea>
-                        </div>
-                    </div>
-                    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-0.5 rounded-2xl shadow-sm">
-                        <div class="bg-white p-4 rounded-[14px]">
-                            <label class="block font-extrabold text-blue-800 text-sm mb-2 flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs">O</span> PELUANG (OPPORTUNITIES)
-                            </label>
-                            <textarea id="swot-o" oninput="saveData()" rows="5" class="w-full p-3 border border-blue-200 rounded-xl bg-blue-50/30 text-slate-700 font-medium focus:ring-2 focus:ring-blue-500"></textarea>
-                        </div>
-                    </div>
-                    <div class="bg-gradient-to-br from-rose-500 to-pink-600 p-0.5 rounded-2xl shadow-sm">
-                        <div class="bg-white p-4 rounded-[14px]">
-                            <label class="block font-extrabold text-rose-800 text-sm mb-2 flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xs">C</span> CABARAN (THREATS)
-                            </label>
-                            <textarea id="swot-c" oninput="saveData()" rows="5" class="w-full p-3 border border-rose-200 rounded-xl bg-rose-50/30 text-slate-700 font-medium focus:ring-2 focus:ring-rose-500"></textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION 3: PELAN STRATEGIK -->
-        <section id="sec-strategik" class="tab-content hidden space-y-6">
-            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
-                <div class="flex items-center justify-between mb-5 border-b pb-3">
-                    <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-                        <span class="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center"><i class="fa-solid fa-bullseye"></i></span>
-                        Pelan Strategik Panitia (TOV, OTI 1, OTI 2, ETR)
-                    </h2>
-                    <button onclick="addStrategikRow()" class="text-xs px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-plus"></i> Tambah Isu
-                    </button>
-                </div>
-
-                <div class="overflow-x-auto w-full max-w-full">
-                    <table class="w-full text-left text-xs border-collapse min-w-[700px]">
-                        <thead>
-                            <tr class="bg-purple-50 text-purple-950 font-bold border-b border-purple-200">
-                                <th class="p-3 w-10 text-center">Bil</th>
-                                <th class="p-3">Isu Strategik / Matlamat</th>
-                                <th class="p-3">Petunjuk Prestasi Utama (KPI)</th>
-                                <th class="p-3 w-16 text-center">TOV (%)</th>
-                                <th class="p-3 w-16 text-center">OTI 1</th>
-                                <th class="p-3 w-16 text-center">OTI 2</th>
-                                <th class="p-3 w-16 text-center">ETR (%)</th>
-                                <th class="p-3 w-10 text-center">Padam</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbl-strategik-body">
-                            <!-- Dynamic Content -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION 4: PELAN TAKTIKAL -->
-        <section id="sec-taktikal" class="tab-content hidden space-y-6">
-            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
-                <div class="flex flex-wrap items-center justify-between gap-3 mb-5 border-b pb-3">
-                    <div>
-                        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-                            <span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center"><i class="fa-solid fa-list-check"></i></span>
-                            Pelan Taktikal Panitia (Tahunan)
-                        </h2>
-                        <p class="text-xs text-slate-500 font-medium">Setiap program di sini akan menjana 1 Pelan Operasi & OPPM secara automatik!</p>
-                    </div>
-                    <button onclick="addTaktikalRow()" class="text-xs px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold rounded-xl shadow transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-plus"></i> Tambah Program Taktikal
-                    </button>
-                </div>
-
-                <div class="overflow-x-auto w-full max-w-full">
-                    <table class="w-full text-left text-xs border-collapse min-w-[800px]">
-                        <thead>
-                            <tr class="bg-amber-50 text-amber-950 font-bold border-b border-amber-200">
-                                <th class="p-2.5 w-10 text-center">Bil</th>
-                                <th class="p-2.5">Nama Program / Projek</th>
-                                <th class="p-2.5">Tanggungjawab</th>
-                                <th class="p-2.5">Tempoh / Bulan</th>
-                                <th class="p-2.5 w-28 text-right">Kos (RM)</th>
-                                <th class="p-2.5">KPI & Sasaran</th>
-                                <th class="p-2.5 w-10 text-center">Padam</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbl-taktikal-body">
-                            <!-- Dynamic Content -->
-                        </tbody>
-                        <tfoot>
-                            <tr class="bg-amber-100/50 font-extrabold border-t border-amber-200 text-slate-800">
-                                <td colspan="4" class="p-3 text-right">Jumlah Perbelanjaan Keseluruhan (RM):</td>
-                                <td id="lbl-total-bajet" class="p-3 text-right text-indigo-700 text-sm">0.00</td>
-                                <td colspan="2"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION 5: OPPM BOARD (ONE PAGE PROJECT MANAGER) -->
-        <section id="sec-oppm" class="tab-content hidden space-y-6">
-            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
-                <div class="flex flex-wrap items-center justify-between gap-3 mb-5 border-b pb-3">
-                    <div>
-                        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-                            <span class="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center"><i class="fa-solid fa-chart-gantt"></i></span>
-                            OPPM (One Page Project Manager) Panitia
-                        </h2>
-                        <p class="text-xs text-slate-500 font-medium">Carta Garis Masa 12-Bulan (Jan-Dis), Pemetaan Matlamat & Matrix Tanggungjawab AJK</p>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto w-full max-w-full">
-                    <table class="w-full text-left text-[11px] border-collapse border border-slate-300 min-w-[900px]">
-                        <thead>
-                            <!-- HEADER BARIS 1 -->
-                            <tr class="bg-slate-900 text-white font-bold text-center">
-                                <th rowspan="2" class="p-2 border border-slate-700 w-8">Bil</th>
-                                <th rowspan="2" class="p-2 border border-slate-700 w-48 text-left">Sub-tugasan / Inisiatif Utama</th>
-                                <th colspan="12" class="p-1 border border-slate-700 bg-rose-900">Carta Gantt Pelaksanaan (Bulan Jan - Dis)</th>
-                                <th colspan="3" class="p-1 border border-slate-700 bg-indigo-900">Objektif Strategik</th>
-                                <th colspan="3" class="p-1 border border-slate-700 bg-emerald-900">Tanggungjawab AJK</th>
-                            </tr>
-                            <!-- HEADER BARIS 2 -->
-                            <tr class="bg-slate-800 text-white font-bold text-center">
-                                <th class="p-1 w-6">J</th><th class="p-1 w-6">F</th><th class="p-1 w-6">M</th>
-                                <th class="p-1 w-6">A</th><th class="p-1 w-6">M</th><th class="p-1 w-6">J</th>
-                                <th class="p-1 w-6">J</th><th class="p-1 w-6">O</th><th class="p-1 w-6">S</th>
-                                <th class="p-1 w-6">O</th><th class="p-1 w-6">N</th><th class="p-1 w-6">D</th>
-                                <th class="p-1 w-7" title="Objektif A: PBD/Akademik">A</th>
-                                <th class="p-1 w-7" title="Objektif B: Literasi/Pedagogi">B</th>
-                                <th class="p-1 w-7" title="Objektif C: Sahsiah/Inovasi">C</th>
-                                <th class="p-1 w-8" title="Ketua Panitia">KP</th>
-                                <th class="p-1 w-8" title="Setiausaha">SU</th>
-                                <th class="p-1 w-8" title="AJK Guru">AJK</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbl-oppm-body">
-                            <!-- Dynamic Content -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION 6: PELAN OPERASI (1:1 SYNC) -->
-        <section id="sec-operasi" class="tab-content hidden space-y-6">
-            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
-                <div class="flex flex-wrap items-center justify-between gap-2 mb-5 border-b pb-3">
-                    <div>
-                        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-                            <span class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center"><i class="fa-solid fa-sliders"></i></span>
-                            Pelan Operasi KPM (Pilihan Program 1:1)
-                        </h2>
-                        <p class="text-xs text-slate-500 font-medium">Edit butiran 6-langkah operasi khusus untuk program yang dipilih</p>
-                    </div>
-                </div>
-
-                <div class="mb-6 flex flex-wrap items-center gap-3 bg-cyan-50/60 p-3.5 rounded-2xl border border-cyan-200">
-                    <label class="text-xs font-extrabold text-cyan-950">Pilih Program Operasi:</label>
-                    <select id="sel-operasi-program" onchange="renderOperasiEditor()" class="text-xs p-2.5 rounded-xl border-2 border-cyan-300 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 flex-1 max-w-md">
-                        <!-- Dynamic Options -->
+            <form onsubmit="handleLogin(event)" class="space-y-4 text-xs">
+                <!-- Subject Selector (Visible only for Ketua Panitia) -->
+                <div id="loginSubjectGroup">
+                    <label class="block font-bold text-slate-700 mb-1.5">Pilih Mata Pelajaran Panitia</label>
+                    <select id="loginSubjekSelect" class="w-full p-3 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-500 font-bold text-slate-800">
+                        <option value="">-- Memuatkan Senarai Subjek... --</option>
                     </select>
                 </div>
 
-                <div id="operasi-editor-card" class="space-y-4 text-xs">
-                    <!-- Editor fields rendered dynamically -->
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION 7: PRATINJAU & CETAK DOKUMEN A4 -->
-        <section id="sec-cetak" class="tab-content hidden space-y-6">
-            <div class="no-print bg-slate-900 text-white rounded-2xl p-4 text-xs shadow-md flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-amber-400 text-lg"><i class="fa-solid fa-print"></i></span>
-                    <div>
-                        <p class="font-bold">Pratinjau Dokumen Rasmi A4 KPM Standard</p>
-                        <p class="text-[11px] text-slate-300">Dokumen di bawah akan dicetak mengikut susun atur format KPM.</p>
+                <!-- Password Input -->
+                <div>
+                    <label id="loginPasswordLabel" class="block font-bold text-slate-700 mb-1.5">Kata Laluan Ketua Panitia</label>
+                    <div class="relative">
+                        <input type="password" id="loginPasswordInput" required placeholder="Masukkan kata laluan..." class="w-full p-3 pr-10 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-500 font-semibold text-slate-800">
+                        <button type="button" onclick="togglePasswordVisibility('loginPasswordInput', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
                     </div>
                 </div>
-                <button onclick="window.print()" class="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold rounded-xl transition shadow-lg flex items-center gap-1.5">
-                    <i class="fa-solid fa-print"></i> Cetak PDF
+
+                <div id="loginErrorMsg" class="hidden p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-bold text-center"></div>
+
+                <button type="submit" id="btnLoginSubmit" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-extrabold rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-right-to-bracket"></i> Log Masuk Sistem
+                </button>
+            </form>
+
+            <div class="mt-5 pt-4 border-t border-slate-100 text-center text-[11px] text-slate-400">
+                <p>Hubungi Pentadbir / GPK Pentadbiran jika terlupa kata laluan.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN APPLICATION (HIDDEN UNTIL LOGGED IN) ==================== -->
+    <div id="mainAppWrapper" class="hidden">
+
+        <!-- HEADER BAR EXECUTIVE UI -->
+        <header class="no-print bg-gradient-to-r from-slate-950 via-indigo-950 to-purple-950 text-white sticky top-0 z-40 shadow-xl border-b border-indigo-500/20">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center space-x-3">
+                    <div id="headerLogoContainer" class="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center p-1 border border-white/20 shadow-inner">
+                        <img id="headerLogoImg" src="https://upload.wikimedia.org/wikipedia/commons/9/9c/Coat_of_arms_of_Malaysia.svg" alt="Logo KPM" class="max-h-full max-w-full object-contain">
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-sm md:text-base leading-tight tracking-wide flex flex-wrap items-center gap-2">
+                            <span id="headerSchoolName">Sistem Panitia KPM</span>
+                            <span id="roleBadge" class="text-[10px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full font-black uppercase">Ketua Panitia</span>
+                        </h1>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span id="syncStatusBadge" class="text-[11px] text-emerald-300 font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-cloud-check"></i> Disimpan ke Cloud
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT SWITCHER -->
+                <div class="flex items-center bg-white/10 backdrop-blur-md p-1 rounded-xl border border-white/15 text-xs">
+                    <button id="btnDesktopView" onclick="setViewportMode('desktop')" class="px-2.5 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 bg-indigo-600 text-white shadow-md transition">
+                        <i class="fa-solid fa-desktop"></i>
+                        <span class="hidden md:inline">Komputer</span>
+                    </button>
+                    <button id="btnMobileView" onclick="setViewportMode('mobile')" class="px-2.5 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 text-white/70 hover:text-white transition">
+                        <i class="fa-solid fa-mobile-screen"></i>
+                        <span class="hidden md:inline">Mobil</span>
+                    </button>
+                </div>
+
+                <!-- QUICK ACTIONS -->
+                <div class="flex items-center flex-wrap gap-1.5 text-xs">
+                    <button onclick="forceSaveNow()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg font-extrabold transition flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> <span class="hidden sm:inline">Simpan</span>
+                    </button>
+                    <button onclick="exportJSON()" class="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white font-semibold transition flex items-center gap-1" title="Eksport Sandaran JSON">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                    <button onclick="document.getElementById('importFile').click()" class="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white font-semibold transition flex items-center gap-1" title="Import JSON">
+                        <i class="fa-solid fa-upload"></i>
+                    </button>
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="importJSON(event)">
+                    <button onclick="window.print()" class="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold rounded-lg shadow-md transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> <span class="hidden sm:inline">Cetak PDF</span>
+                    </button>
+                    <button onclick="logoutSystem()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg shadow transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Keluar</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN APP CONTAINER -->
+        <div id="appContainer" class="max-w-7xl mx-auto px-4 py-6 transition-all duration-300">
+            
+            <div id="mobileNotch" class="mobile-notch hidden"></div>
+
+            <!-- ADMIN CONTEXT BANNER (Shown when Admin is inspecting a specific subject) -->
+            <div id="adminSubjectBanner" class="hidden no-print mb-4 bg-indigo-900 text-white px-4 py-3 rounded-2xl shadow-md flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-black"><i class="fa-solid fa-user-shield"></i></span>
+                    <div>
+                        <p class="font-extrabold">Mod Pentadbir: Sedang Menyemak Subjek <span id="adminBannerSubjekName" class="text-amber-300 underline"></span></p>
+                        <p class="text-[11px] text-indigo-200">Anda boleh menyunting data panitia ini atau mencetak laporan rasmi A4.</p>
+                    </div>
+                </div>
+                <button onclick="switchTab('admin')" class="px-3.5 py-2 bg-white text-indigo-950 hover:bg-amber-300 font-extrabold rounded-xl transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-left"></i> Kembali ke Panel Pentadbir
                 </button>
             </div>
 
-            <div class="overflow-x-auto w-full max-w-full flex justify-center">
-                <div id="a4-print-area" class="a4-container bg-white p-8 md:p-12 shadow-2xl rounded-2xl border border-slate-300 min-w-[210mm] max-w-[210mm] text-black">
-                    <!-- Document rendered dynamically -->
+            <!-- STATS BOARD EXECUTIVE CARD -->
+            <div class="no-print grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
+                        <span>BAJET PANITIA SEMASA</span>
+                        <i class="fa-solid fa-sack-dollar text-emerald-600"></i>
+                    </div>
+                    <div id="stat-bajet" class="text-lg md:text-xl font-extrabold text-slate-800">RM 0.00</div>
+                </div>
+                <div class="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
+                        <span>PROGRAM TAKTIKAL</span>
+                        <i class="fa-solid fa-list-check text-blue-600"></i>
+                    </div>
+                    <div id="stat-program" class="text-lg md:text-xl font-extrabold text-slate-800">0 Program</div>
+                </div>
+                <div class="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
+                        <span>PURATA ETR SASARAN</span>
+                        <i class="fa-solid fa-chart-line text-purple-600"></i>
+                    </div>
+                    <div id="stat-etr" class="text-lg md:text-xl font-extrabold text-slate-800">0%</div>
+                </div>
+                <div class="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
+                        <span>SUBJEK AKTIF</span>
+                        <i class="fa-solid fa-book-open text-amber-600"></i>
+                    </div>
+                    <div id="stat-subjek" class="text-xs font-extrabold text-indigo-700 truncate">-</div>
                 </div>
             </div>
-        </section>
 
+            <!-- MODULE TABS NAVIGATION -->
+            <nav class="no-print bg-white/90 backdrop-blur-md rounded-2xl shadow-md border border-slate-200 p-2 mb-6 flex flex-wrap gap-1">
+                <!-- Admin Only Tab -->
+                <button onclick="switchTab('admin')" id="tab-admin" class="hidden nav-btn flex-1 min-w-[130px] py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 text-amber-900 bg-amber-100 border border-amber-300 shadow-sm">
+                    <i class="fa-solid fa-user-shield text-amber-700"></i> Panel Pentadbir
+                </button>
+                <button onclick="switchTab('profil')" id="tab-profil" class="nav-btn flex-1 min-w-[115px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-indigo-600 bg-indigo-50 border border-indigo-200 shadow-sm">
+                    <i class="fa-solid fa-school text-indigo-600"></i> Profil & Logo
+                </button>
+                <button onclick="switchTab('swot')" id="tab-swot" class="nav-btn flex-1 min-w-[115px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
+                    <i class="fa-solid fa-table-cells-large text-emerald-600"></i> SWOT/SWOC
+                </button>
+                <button onclick="switchTab('strategik')" id="tab-strategik" class="nav-btn flex-1 min-w-[115px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
+                    <i class="fa-solid fa-bullseye text-purple-600"></i> Pelan Strategik
+                </button>
+                <button onclick="switchTab('taktikal')" id="tab-taktikal" class="nav-btn flex-1 min-w-[115px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
+                    <i class="fa-solid fa-list-check text-amber-600"></i> Pelan Taktikal
+                </button>
+                <button onclick="switchTab('oppm')" id="tab-oppm" class="nav-btn flex-1 min-w-[115px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
+                    <i class="fa-solid fa-chart-gantt text-rose-600"></i> OPPM Board
+                </button>
+                <button onclick="switchTab('operasi')" id="tab-operasi" class="nav-btn flex-1 min-w-[115px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
+                    <i class="fa-solid fa-sliders text-cyan-600"></i> Pelan Operasi
+                </button>
+                <button onclick="switchTab('cetak')" id="tab-cetak" class="nav-btn flex-1 min-w-[115px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50">
+                    <i class="fa-solid fa-file-invoice text-slate-700"></i> Pratinjau PDF
+                </button>
+            </nav>
+
+            <!-- ==================== SECTION 0: ADMIN DASHBOARD & PASSWORD MANAGER ==================== -->
+            <section id="sec-admin" class="tab-content hidden space-y-6">
+                <!-- School-Wide Summary KPIs -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-2xl shadow-md">
+                        <p class="text-xs font-bold text-indigo-200">JUMLAH KESELURUHAN PANITIA</p>
+                        <p id="admin-total-panitia" class="text-2xl font-extrabold mt-1">0 Subjek</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-emerald-800 to-teal-900 text-white p-5 rounded-2xl shadow-md">
+                        <p class="text-xs font-bold text-emerald-200">JUMLAH BAJET SEMUA PANITIA</p>
+                        <p id="admin-total-bajet" class="text-2xl font-extrabold mt-1">RM 0.00</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-amber-600 to-orange-700 text-white p-5 rounded-2xl shadow-md">
+                        <p class="text-xs font-bold text-amber-100">JUMLAH PROGRAM TAKTIKAL SEKOLAH</p>
+                        <p id="admin-total-program" class="text-2xl font-extrabold mt-1">0 Program</p>
+                    </div>
+                </div>
+
+                <!-- Admin Password Change Box -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
+                    <h2 class="text-base font-extrabold text-slate-800 mb-3 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center"><i class="fa-solid fa-key"></i></span>
+                        Keselamatan & Kata Laluan Pentadbir (Admin)
+                    </h2>
+                    <div class="flex flex-wrap items-end gap-3 text-xs">
+                        <div class="flex-1 min-w-[220px]">
+                            <label class="block font-bold text-slate-700 mb-1">Kata Laluan Baharu Pentadbir</label>
+                            <input type="password" id="adminNewPassInput" placeholder="Masukkan kata laluan baharu Admin (min 4 aksara)" class="w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white">
+                        </div>
+                        <button onclick="updateAdminPassword()" class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-xl shadow transition">
+                            Kemaskini Kata Laluan Admin
+                        </button>
+                    </div>
+                </div>
+
+                <!-- All Subjects Monitoring & Password Management Table -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4 border-b pb-3">
+                        <div>
+                            <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center"><i class="fa-solid fa-users-gear"></i></span>
+                                Senarai Semua Panitia & Pengurusan Kata Laluan Ketua Panitia
+                            </h2>
+                            <p class="text-xs text-slate-500">Semak status perancangan setiap subjek, buka paparan suntingan, atau tetapkan semula kata laluan Ketua Panitia.</p>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <select id="adminFilterTahap" onchange="renderAdminTable()" class="p-2 border rounded-xl font-bold bg-slate-50">
+                                <option value="ALL">Semua Tahap (SK & SMK)</option>
+                                <option value="SK">Sekolah Rendah (SK)</option>
+                                <option value="SMK">Sekolah Menengah (SMK)</option>
+                            </select>
+                            <input type="text" id="adminSearchSubjek" oninput="renderAdminTable()" placeholder="Cari subjek / KP..." class="p-2 border rounded-xl bg-slate-50">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto w-full">
+                        <table class="w-full text-left text-xs border-collapse min-w-[820px]">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+                                    <th class="p-3 w-10 text-center">Bil</th>
+                                    <th class="p-3">Mata Pelajaran (Panitia)</th>
+                                    <th class="p-3 w-16 text-center">Tahap</th>
+                                    <th class="p-3">Nama Ketua Panitia</th>
+                                    <th class="p-3 w-24 text-center">Program</th>
+                                    <th class="p-3 w-28 text-right">Bajet (RM)</th>
+                                    <th class="p-3 w-36">Kemaskini Terakhir</th>
+                                    <th class="p-3 w-56 text-center">Tindakan Pentadbir</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbl-admin-panitia">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SECTION 1: PROFIL & LOGO ==================== -->
+            <section id="sec-profil" class="tab-content space-y-6">
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-5 border-b pb-3">
+                        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2.5">
+                            <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center"><i class="fa-solid fa-school"></i></span>
+                            Profil Panitia & Logo Sekolah
+                        </h2>
+                        <span id="schoolScopeNote" class="text-xs bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-bold">Standard KPM</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-gradient-to-b from-indigo-50/70 to-slate-50 rounded-2xl p-5 border border-indigo-100 flex flex-col items-center justify-center text-center shadow-inner">
+                            <div class="relative group mb-3">
+                                <div class="w-32 h-32 rounded-2xl bg-white border-2 border-indigo-200 shadow-md flex items-center justify-center overflow-hidden p-2">
+                                    <img id="schoolLogoPreview" src="https://upload.wikimedia.org/wikipedia/commons/9/9c/Coat_of_arms_of_Malaysia.svg" alt="Preview Logo" class="max-h-full max-w-full object-contain">
+                                </div>
+                                <label id="logoUploadOverlay" for="logoInput" class="absolute inset-0 bg-indigo-950/70 text-white rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition">
+                                    <i class="fa-solid fa-camera text-2xl mb-1 text-amber-400"></i>
+                                    <span class="text-xs font-bold">Muat Naik Logo</span>
+                                </label>
+                                <input type="file" id="logoInput" accept="image/*" class="hidden" onchange="handleLogoUpload(event)">
+                            </div>
+                            <p class="text-xs font-bold text-slate-700 mb-1">Logo Rasmi Sekolah</p>
+                            <button id="btnResetLogo" onclick="resetLogo()" class="text-[11px] text-rose-600 hover:text-rose-800 font-semibold underline">Reset Logo Default</button>
+                            <p id="kpLogoLockHint" class="hidden text-[11px] text-slate-400 mt-1 italic">Logo diuruskan oleh Pentadbir</p>
+                        </div>
+
+                        <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Nama Sekolah <span class="text-[10px] text-indigo-600">(Induk)</span></label>
+                                <input type="text" id="cfg-namaSekolah" oninput="onSchoolSettingChange()" class="school-global-input w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-700 mb-1">Kod Sekolah <span class="text-[10px] text-indigo-600">(Induk)</span></label>
+                                <input type="text" id="cfg-kodSekolah" oninput="onSchoolSettingChange()" class="school-global-input w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block font-bold text-indigo-900 mb-1">Mata Pelajaran Panitia Aktif</label>
+                                <select id="cfg-subjek" onchange="onAdminSwitchSubject(this.value)" class="w-full p-2.5 border-2 border-indigo-400 rounded-xl bg-indigo-50 text-indigo-950 font-extrabold focus:ring-2 focus:ring-indigo-500">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block font-bold text-slate-700 mb-1">Tahun Perancangan Strategik <span class="text-[10px] text-indigo-600">(Induk)</span></label>
+                                <input type="text" id="cfg-tahunStrategik" oninput="onSchoolSettingChange()" class="school-global-input w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARTA ORGANISASI ROSTER -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
+                    <h3 class="text-base font-extrabold text-slate-800 mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center"><i class="fa-solid fa-sitemap"></i></span>
+                        Carta Organisasi Panitia (5-Tingkat Standard KPM)
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Pengetua / Guru Besar <span class="text-[10px] text-indigo-600">(Induk)</span></label>
+                            <input type="text" id="cfg-pengetua" oninput="onSchoolSettingChange()" class="school-global-input w-full p-2.5 border rounded-xl">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">GPK Pentadbiran & Kurikulum <span class="text-[10px] text-indigo-600">(Induk)</span></label>
+                            <input type="text" id="cfg-gpk" oninput="onSchoolSettingChange()" class="school-global-input w-full p-2.5 border rounded-xl">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Ketua Panitia</label>
+                            <input type="text" id="cfg-ketuaPanitia" oninput="saveData()" class="w-full p-2.5 border rounded-xl font-bold text-indigo-700">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Penolong Ketua Panitia</label>
+                            <input type="text" id="cfg-penolongKP" oninput="saveData()" class="w-full p-2.5 border rounded-xl">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Setiausaha Panitia</label>
+                            <input type="text" id="cfg-setiausaha" oninput="saveData()" class="w-full p-2.5 border rounded-xl">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">AJK Guru Subjek</label>
+                            <input type="text" id="cfg-ajk" oninput="saveData()" class="w-full p-2.5 border rounded-xl">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KP Self Password Change Card (Visible when logged in as Ketua Panitia) -->
+                <div id="kpSelfPasswordCard" class="hidden bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
+                    <h3 class="text-base font-extrabold text-slate-800 mb-3 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center"><i class="fa-solid fa-lock"></i></span>
+                        Tukar Kata Laluan Ketua Panitia
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs items-end">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Kata Laluan Semasa</label>
+                            <input type="password" id="kpOldPass" placeholder="Kata laluan lama" class="w-full p-2.5 border rounded-xl bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Kata Laluan Baharu</label>
+                            <input type="password" id="kpNewPass" placeholder="Minimum 4 aksara" class="w-full p-2.5 border rounded-xl bg-slate-50">
+                        </div>
+                        <button onclick="kpChangeOwnPassword()" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl shadow transition">
+                            Simpan Kata Laluan Baharu
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SECTION 2: SWOT / SWOC ==================== -->
+            <section id="sec-swot" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
+                    <div class="flex items-center justify-between mb-5 border-b pb-3">
+                        <div>
+                            <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center"><i class="fa-solid fa-table-cells-large"></i></span>
+                                Analisis SWOT / SWOC Panitia
+                            </h2>
+                            <p class="text-xs text-slate-500 font-medium">Kekuatan (S), Kelemahan (W), Peluang (O), Cabaran (C)</p>
+                        </div>
+                        <button onclick="loadSWOTTemplate()" class="text-xs px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 rounded-xl font-bold shadow transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Load Templat Subjek
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+                        <div class="bg-gradient-to-br from-emerald-500 to-teal-600 p-0.5 rounded-2xl shadow-sm">
+                            <div class="bg-white p-4 rounded-[14px]">
+                                <label class="block font-extrabold text-emerald-800 text-sm mb-2 flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">S</span> KEKUATAN (STRENGTHS)
+                                </label>
+                                <textarea id="swot-s" oninput="saveData()" rows="5" class="w-full p-3 border border-emerald-200 rounded-xl bg-emerald-50/30 text-slate-700 font-medium focus:ring-2 focus:ring-emerald-500"></textarea>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-amber-500 to-orange-600 p-0.5 rounded-2xl shadow-sm">
+                            <div class="bg-white p-4 rounded-[14px]">
+                                <label class="block font-extrabold text-amber-800 text-sm mb-2 flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs">W</span> KELEMAHAN (WEAKNESSES)
+                                </label>
+                                <textarea id="swot-w" oninput="saveData()" rows="5" class="w-full p-3 border border-amber-200 rounded-xl bg-amber-50/30 text-slate-700 font-medium focus:ring-2 focus:ring-amber-500"></textarea>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-0.5 rounded-2xl shadow-sm">
+                            <div class="bg-white p-4 rounded-[14px]">
+                                <label class="block font-extrabold text-blue-800 text-sm mb-2 flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs">O</span> PELUANG (OPPORTUNITIES)
+                                </label>
+                                <textarea id="swot-o" oninput="saveData()" rows="5" class="w-full p-3 border border-blue-200 rounded-xl bg-blue-50/30 text-slate-700 font-medium focus:ring-2 focus:ring-blue-500"></textarea>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-rose-500 to-pink-600 p-0.5 rounded-2xl shadow-sm">
+                            <div class="bg-white p-4 rounded-[14px]">
+                                <label class="block font-extrabold text-rose-800 text-sm mb-2 flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xs">C</span> CABARAN (THREATS)
+                                </label>
+                                <textarea id="swot-c" oninput="saveData()" rows="5" class="w-full p-3 border border-rose-200 rounded-xl bg-rose-50/30 text-slate-700 font-medium focus:ring-2 focus:ring-rose-500"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SECTION 3: PELAN STRATEGIK ==================== -->
+            <section id="sec-strategik" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
+                    <div class="flex items-center justify-between mb-5 border-b pb-3">
+                        <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center"><i class="fa-solid fa-bullseye"></i></span>
+                            Pelan Strategik Panitia (TOV, OTI 1, OTI 2, ETR)
+                        </h2>
+                        <button onclick="addStrategikRow()" class="text-xs px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Tambah Isu
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto w-full max-w-full">
+                        <table class="w-full text-left text-xs border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-purple-50 text-purple-950 font-bold border-b border-purple-200">
+                                    <th class="p-3 w-10 text-center">Bil</th>
+                                    <th class="p-3">Isu Strategik / Matlamat</th>
+                                    <th class="p-3">Petunjuk Prestasi Utama (KPI)</th>
+                                    <th class="p-3 w-16 text-center">TOV (%)</th>
+                                    <th class="p-3 w-16 text-center">OTI 1</th>
+                                    <th class="p-3 w-16 text-center">OTI 2</th>
+                                    <th class="p-3 w-16 text-center">ETR (%)</th>
+                                    <th class="p-3 w-10 text-center">Padam</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbl-strategik-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SECTION 4: PELAN TAKTIKAL ==================== -->
+            <section id="sec-taktikal" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-5 border-b pb-3">
+                        <div>
+                            <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center"><i class="fa-solid fa-list-check"></i></span>
+                                Pelan Taktikal Panitia (Tahunan)
+                            </h2>
+                            <p class="text-xs text-slate-500 font-medium">Setiap program di sini akan menjana 1 Pelan Operasi & OPPM secara automatik!</p>
+                        </div>
+                        <button onclick="addTaktikalRow()" class="text-xs px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold rounded-xl shadow transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Tambah Program Taktikal
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto w-full max-w-full">
+                        <table class="w-full text-left text-xs border-collapse min-w-[800px]">
+                            <thead>
+                                <tr class="bg-amber-50 text-amber-950 font-bold border-b border-amber-200">
+                                    <th class="p-2.5 w-10 text-center">Bil</th>
+                                    <th class="p-2.5">Nama Program / Projek</th>
+                                    <th class="p-2.5">Tanggungjawab</th>
+                                    <th class="p-2.5">Tempoh / Bulan</th>
+                                    <th class="p-2.5 w-28 text-right">Kos (RM)</th>
+                                    <th class="p-2.5">KPI & Sasaran</th>
+                                    <th class="p-2.5 w-10 text-center">Padam</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbl-taktikal-body"></tbody>
+                            <tfoot>
+                                <tr class="bg-amber-100/50 font-extrabold border-t border-amber-200 text-slate-800">
+                                    <td colspan="4" class="p-3 text-right">Jumlah Perbelanjaan Keseluruhan (RM):</td>
+                                    <td id="lbl-total-bajet" class="p-3 text-right text-indigo-700 text-sm">0.00</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SECTION 5: OPPM BOARD ==================== -->
+            <section id="sec-oppm" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-5 border-b pb-3">
+                        <div>
+                            <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center"><i class="fa-solid fa-chart-gantt"></i></span>
+                                OPPM (One Page Project Manager) Panitia
+                            </h2>
+                            <p class="text-xs text-slate-500 font-medium">Carta Garis Masa 12-Bulan (Jan-Dis), Pemetaan Matlamat & Matrix Tanggungjawab AJK</p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto w-full max-w-full">
+                        <table class="w-full text-left text-[11px] border-collapse border border-slate-300 min-w-[900px]">
+                            <thead>
+                                <tr class="bg-slate-900 text-white font-bold text-center">
+                                    <th rowspan="2" class="p-2 border border-slate-700 w-8">Bil</th>
+                                    <th rowspan="2" class="p-2 border border-slate-700 w-48 text-left">Sub-tugasan / Inisiatif Utama</th>
+                                    <th colspan="12" class="p-1 border border-slate-700 bg-rose-900">Carta Gantt Pelaksanaan (Bulan Jan - Dis)</th>
+                                    <th colspan="3" class="p-1 border border-slate-700 bg-indigo-900">Objektif Strategik</th>
+                                    <th colspan="3" class="p-1 border border-slate-700 bg-emerald-900">Tanggungjawab AJK</th>
+                                </tr>
+                                <tr class="bg-slate-800 text-white font-bold text-center">
+                                    <th class="p-1 w-6">J</th><th class="p-1 w-6">F</th><th class="p-1 w-6">M</th>
+                                    <th class="p-1 w-6">A</th><th class="p-1 w-6">M</th><th class="p-1 w-6">J</th>
+                                    <th class="p-1 w-6">J</th><th class="p-1 w-6">O</th><th class="p-1 w-6">S</th>
+                                    <th class="p-1 w-6">O</th><th class="p-1 w-6">N</th><th class="p-1 w-6">D</th>
+                                    <th class="p-1 w-7" title="Objektif A: PBD/Akademik">A</th>
+                                    <th class="p-1 w-7" title="Objektif B: Literasi/Pedagogi">B</th>
+                                    <th class="p-1 w-7" title="Objektif C: Sahsiah/Inovasi">C</th>
+                                    <th class="p-1 w-8" title="Ketua Panitia">KP</th>
+                                    <th class="p-1 w-8" title="Setiausaha">SU</th>
+                                    <th class="p-1 w-8" title="AJK Guru">AJK</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbl-oppm-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== SECTION 6: PELAN OPERASI ==================== -->
+            <section id="sec-operasi" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-5 border-b pb-3">
+                        <div>
+                            <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center"><i class="fa-solid fa-sliders"></i></span>
+                                Pelan Operasi KPM (Pilihan Program 1:1)
+                            </h2>
+                            <p class="text-xs text-slate-500 font-medium">Edit butiran 6-langkah operasi khusus untuk program yang dipilih</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-6 flex flex-wrap items-center gap-3 bg-cyan-50/60 p-3.5 rounded-2xl border border-cyan-200">
+                        <label class="text-xs font-extrabold text-cyan-950">Pilih Program Operasi:</label>
+                        <select id="sel-operasi-program" onchange="renderOperasiEditor()" class="text-xs p-2.5 rounded-xl border-2 border-cyan-300 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 flex-1 max-w-md"></select>
+                    </div>
+
+                    <div id="operasi-editor-card" class="space-y-4 text-xs"></div>
+                </div>
+            </section>
+
+            <!-- ==================== SECTION 7: PRATINJAU & CETAK DOKUMEN A4 ==================== -->
+            <section id="sec-cetak" class="tab-content hidden space-y-6">
+                <div class="no-print bg-slate-900 text-white rounded-2xl p-4 text-xs shadow-md flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-amber-400 text-lg"><i class="fa-solid fa-print"></i></span>
+                        <div>
+                            <p class="font-bold">Pratinjau Dokumen Rasmi A4 KPM Standard</p>
+                            <p class="text-[11px] text-slate-300">Dokumen di bawah akan dicetak mengikut susun atur format KPM.</p>
+                        </div>
+                    </div>
+                    <button onclick="window.print()" class="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold rounded-xl transition shadow-lg flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Cetak PDF
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto w-full max-w-full flex justify-center">
+                    <div id="a4-print-area" class="a4-container bg-white p-8 md:p-12 shadow-2xl rounded-2xl border border-slate-300 min-w-[210mm] max-w-[210mm] text-black"></div>
+                </div>
+            </section>
+
+        </div>
     </div>
 
-    <!-- JAVASCRIPT CORE LOGIC -->
+    <!-- ==================== MODAL: ADMIN SET SUBJECT PASSWORD ==================== -->
+    <div id="adminSetPassModal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 text-xs">
+            <h3 class="text-base font-extrabold text-slate-900 mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-key text-indigo-600"></i> Tetapkan Kata Laluan Panitia
+            </h3>
+            <p class="text-slate-500 mb-4">Subjek: <b id="modalTargetSubjekLabel" class="text-indigo-700"></b></p>
+            <input type="hidden" id="modalTargetSubjekValue">
+            <div class="mb-4">
+                <label class="block font-bold text-slate-700 mb-1">Kata Laluan Baharu Ketua Panitia</label>
+                <input type="text" id="modalNewKpPass" placeholder="Contoh: bm2026" class="w-full p-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-500 font-bold">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeSetPassModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-700">Batal</button>
+                <button onclick="confirmSetSubjectPassword()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-extrabold text-white shadow">Simpan Kata Laluan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== JAVASCRIPT CORE LOGIC + SUPABASE ==================== -->
     <script>
+        // =========================================================================
+        // KONFIGURASI SUPABASE (SILA TUKAR URL & ANON KEY ANDA DI SINI)
+        // =========================================================================
+        const SUPABASE_URL = "https://lzzrgobstvmxqyjpmmyg.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_C_mtgHUvYhpwBx-BeU0ZZQ_HCEHU_qA";
+        // =========================================================================
+
+        let sb = null;
+        let loginRoleMode = 'kp'; // 'kp' | 'admin'
+        let sessionAuth = {
+            loggedIn: false,
+            role: null,      // 'admin' | 'kp'
+            subjek: null,    // Active subject name
+            password: null   // Session password used for RPC write verification
+        };
+
+        let allPanitiaCache = []; // For Admin dashboard & subject list
+        let saveTimer = null;
+        let hasUnsavedChanges = false;
+
         let state = {
             viewport: 'desktop',
             logoBase64: 'https://upload.wikimedia.org/wikipedia/commons/9/9c/Coat_of_arms_of_Malaysia.svg',
@@ -550,51 +725,619 @@
                 tahunStrategik: "2024 - 2027",
                 pengetua: "Dato' Hj. Ahmad bin Harun",
                 gpk: "Puan Siti Zubaidah binti Abdullah",
-                ketuaPanitia: "Encik Mohd Ridzuan bin Bakar",
-                penolongKP: "Cik Nurul Huda binti Ismail",
-                setiausaha: "Puan Khadijah binti Rahman",
+                ketuaPanitia: "Belum Ditetapkan",
+                penolongKP: "-",
+                setiausaha: "-",
                 ajk: "Semua Guru Mata Pelajaran"
             },
-            swot: {
-                s: "1. 85% guru opsyen berpengalaman melebihi 5 tahun.\n2. Sokongan padu barisan pentadbir sekolah.\n3. Bahan Pengajaran & Pembelajaran (PdP) digital lengkap.",
-                w: "1. Murid kurang menguasai kosa kata tinggi.\n2. Kemahiran menulis karangan masih di tahap sederhana.",
-                o: "1. Hubungan erat dengan Persatuan Ibu Bapa & Guru (PIBG).\n2. Pembelajaran kendiri melalui portal DELIMa.",
-                c: "1. Kehadiran murid kurang memuaskan pada kelas bimbingan hujung minggu.\n2. Segelintir ibu bapa kurang pemantauan kerja rumah."
-            },
-            strategik: [
-                { id: 1, isu: "Pencapaian PBD murid belum mencapai tahap optimum.", KPI: "Peratus murid mencapai TP4-TP6", tov: "75", oti1: "80", oti2: "85", etr: "90" },
-                { id: 2, isu: "Penguasaan kemahiran membaca & menulis murid galus masih rendah.", KPI: "Peratus murid menguasai asas literasi", tov: "82", oti1: "87", oti2: "92", etr: "98" }
-            ],
-            taktikal: [
-                { id: 1, nama: "Bengkel Teknik Menjawab Soalan KPM", resp: "KP & Semua Guru Subjek", tempoh: "Mac - Mei", kos: "350.00", kpi: "90% murid hadir & menguasai format" },
-                { id: 2, nama: "Kem Literasi & Karnival Bahasa Panitia", resp: "SU Panitia & AJK", tempoh: "Julai", kos: "500.00", kpi: "Peningkatan TP murid sasaran" }
-            ],
-            oppm: {}, // Keyed by taktikal ID
-            operasi: {} // Keyed by taktikal ID
+            swot: { s: "", w: "", o: "", c: "" },
+            strategik: [],
+            taktikal: [],
+            oppm: {},
+            operasi: {}
         };
 
-        function initApp() {
-            const saved = localStorage.getItem('panitia_kpm_oppm_exec_data');
-            if (saved) {
-                try { state = JSON.parse(saved); } catch(e) { console.error("Error loading state", e); }
-            }
-            ensureSync();
-            loadProfilToInputs();
-            renderStatCards();
-            renderStrategikTable();
-            renderTaktikalTable();
-            renderOPPMBoard();
-            renderOperasiEditor();
-            renderPrintDocument();
-            setViewportMode(state.viewport || 'desktop');
+        function escapeAttr(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
         }
 
+        function setSyncStatus(status, text) {
+            const el = document.getElementById('syncStatusBadge');
+            if (!el) return;
+            if (status === 'saving') {
+                el.className = "text-[11px] text-amber-300 font-semibold flex items-center gap-1";
+                el.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${text || 'Menyimpan ke awan...'}`;
+            } else if (status === 'error') {
+                el.className = "text-[11px] text-rose-300 font-bold flex items-center gap-1";
+                el.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${text || 'Ralat sambungan awan!'}`;
+            } else {
+                el.className = "text-[11px] text-emerald-300 font-semibold flex items-center gap-1";
+                el.innerHTML = `<i class="fa-solid fa-cloud-check"></i> ${text || 'Disimpan ke Cloud'}`;
+            }
+        }
+
+        // ==================== INITIALIZATION ====================
+        async function initApp() {
+            if (SUPABASE_URL.includes("YOUR_PROJECT_ID") || SUPABASE_ANON_KEY.includes("YOUR_SUPABASE_ANON_KEY")) {
+                document.getElementById('configWarningBanner').classList.remove('hidden');
+                return;
+            }
+
+            sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            // Load school header info & subject list for Login Screen
+            await fetchInitialMetadata();
+
+            // Check existing sessionStorage
+            const savedSession = sessionStorage.getItem('panitia_kpm_cloud_session');
+            if (savedSession) {
+                try {
+                    const parsed = JSON.parse(savedSession);
+                    if (parsed && parsed.loggedIn && parsed.password) {
+                        sessionAuth = parsed;
+                        await enterWorkspace();
+                    }
+                } catch (e) {
+                    sessionStorage.removeItem('panitia_kpm_cloud_session');
+                }
+            }
+        }
+
+        async function fetchInitialMetadata() {
+            try {
+                const [schoolRes, panitiaRes] = await Promise.all([
+                    sb.from('school_settings').select('*').eq('id', 1).single(),
+                    sb.from('panitia_data').select('subjek, tahap, ketua_panitia, taktikal, updated_at').order('tahap', { ascending: true }).order('subjek', { ascending: true })
+                ]);
+
+                if (schoolRes.data) {
+                    const sc = schoolRes.data;
+                    state.profil.namaSekolah = sc.nama_sekolah;
+                    state.profil.kodSekolah = sc.kod_sekolah;
+                    state.profil.tahunStrategik = sc.tahun_strategik;
+                    state.profil.pengetua = sc.pengetua;
+                    state.profil.gpk = sc.gpk;
+                    state.logoBase64 = sc.logo_base64;
+
+                    document.getElementById('loginSchoolTitle').innerText = sc.nama_sekolah;
+                    if (sc.logo_base64) {
+                        document.getElementById('loginLogoImg').src = sc.logo_base64;
+                    }
+                }
+
+                if (panitiaRes.data) {
+                    allPanitiaCache = panitiaRes.data;
+                    populateSubjectDropdowns(panitiaRes.data);
+                }
+            } catch (err) {
+                console.error("Metadata load error:", err);
+            }
+        }
+
+        function populateSubjectDropdowns(list) {
+            const loginSel = document.getElementById('loginSubjekSelect');
+            const cfgSel = document.getElementById('cfg-subjek');
+            loginSel.innerHTML = '';
+            cfgSel.innerHTML = '';
+
+            const skGroupLogin = document.createElement('optgroup');
+            skGroupLogin.label = "Sekolah Rendah (SK / SJK)";
+            const smkGroupLogin = document.createElement('optgroup');
+            smkGroupLogin.label = "Sekolah Menengah (SMK)";
+
+            const skGroupCfg = document.createElement('optgroup');
+            skGroupCfg.label = "Sekolah Rendah (SK / SJK)";
+            const smkGroupCfg = document.createElement('optgroup');
+            smkGroupCfg.label = "Sekolah Menengah (SMK)";
+
+            list.forEach(item => {
+                const opt1 = document.createElement('option');
+                opt1.value = item.subjek;
+                opt1.innerText = item.subjek;
+
+                const opt2 = document.createElement('option');
+                opt2.value = item.subjek;
+                opt2.innerText = item.subjek;
+
+                if (item.tahap === 'SMK') {
+                    smkGroupLogin.appendChild(opt1);
+                    smkGroupCfg.appendChild(opt2);
+                } else {
+                    skGroupLogin.appendChild(opt1);
+                    skGroupCfg.appendChild(opt2);
+                }
+            });
+
+            loginSel.appendChild(skGroupLogin);
+            loginSel.appendChild(smkGroupLogin);
+            cfgSel.appendChild(skGroupCfg);
+            cfgSel.appendChild(smkGroupCfg);
+        }
+
+        // ==================== LOGIN & LOGOUT ====================
+        function switchLoginRole(mode) {
+            loginRoleMode = mode;
+            const tabKP = document.getElementById('roleTabKP');
+            const tabAdmin = document.getElementById('roleTabAdmin');
+            const subGroup = document.getElementById('loginSubjectGroup');
+            const passLabel = document.getElementById('loginPasswordLabel');
+            document.getElementById('loginErrorMsg').classList.add('hidden');
+
+            if (mode === 'admin') {
+                tabAdmin.className = "py-2.5 rounded-xl bg-amber-400 text-slate-950 shadow transition flex items-center justify-center gap-1.5";
+                tabKP.className = "py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5";
+                subGroup.classList.add('hidden');
+                passLabel.innerText = "Kata Laluan Pentadbir (Admin)";
+            } else {
+                tabKP.className = "py-2.5 rounded-xl bg-indigo-600 text-white shadow transition flex items-center justify-center gap-1.5";
+                tabAdmin.className = "py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5";
+                subGroup.classList.remove('hidden');
+                passLabel.innerText = "Kata Laluan Ketua Panitia";
+            }
+        }
+
+        function togglePasswordVisibility(inputId, btn) {
+            const inp = document.getElementById(inputId);
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                btn.innerHTML = `<i class="fa-solid fa-eye-slash"></i>`;
+            } else {
+                inp.type = 'password';
+                btn.innerHTML = `<i class="fa-solid fa-eye"></i>`;
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            if (!sb) return;
+
+            const btn = document.getElementById('btnLoginSubmit');
+            const errBox = document.getElementById('loginErrorMsg');
+            const password = document.getElementById('loginPasswordInput').value;
+            const subjek = loginRoleMode === 'kp' ? document.getElementById('loginSubjekSelect').value : null;
+
+            if (loginRoleMode === 'kp' && !subjek) {
+                errBox.innerText = "Sila pilih mata pelajaran terlebih dahulu.";
+                errBox.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Mengesahkan...`;
+            errBox.classList.add('hidden');
+
+            try {
+                const { data, error } = await sb.rpc('verify_panitia_login', {
+                    p_role: loginRoleMode,
+                    p_subjek: subjek,
+                    p_password: password
+                });
+
+                if (error) throw error;
+
+                if (data && data.success) {
+                    sessionAuth = {
+                        loggedIn: true,
+                        role: loginRoleMode,
+                        subjek: subjek || (allPanitiaCache[0] ? allPanitiaCache[0].subjek : 'Bahasa Melayu (SK)'),
+                        password: password
+                    };
+                    sessionStorage.setItem('panitia_kpm_cloud_session', JSON.stringify(sessionAuth));
+                    await enterWorkspace();
+                } else {
+                    errBox.innerText = (data && data.message) || "Kata laluan salah.";
+                    errBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                errBox.innerText = "Ralat sambungan Supabase: " + err.message;
+                errBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> Log Masuk Sistem`;
+            }
+        }
+
+        async function enterWorkspace() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainAppWrapper').classList.remove('hidden');
+
+            const isAdmin = sessionAuth.role === 'admin';
+            const roleBadge = document.getElementById('roleBadge');
+            const tabAdmin = document.getElementById('tab-admin');
+            const kpPassCard = document.getElementById('kpSelfPasswordCard');
+            const cfgSubjek = document.getElementById('cfg-subjek');
+
+            // Configure UI permissions based on role
+            if (isAdmin) {
+                roleBadge.className = "text-[10px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full font-black uppercase";
+                roleBadge.innerText = "Pentadbir (Admin)";
+                tabAdmin.classList.remove('hidden');
+                kpPassCard.classList.add('hidden');
+                cfgSubjek.disabled = false;
+                document.getElementById('schoolScopeNote').innerText = "Mod Pentadbir (Akses Penuh)";
+                document.getElementById('logoUploadOverlay').classList.remove('hidden');
+                document.getElementById('btnResetLogo').classList.remove('hidden');
+                document.getElementById('kpLogoLockHint').classList.add('hidden');
+                document.querySelectorAll('.school-global-input').forEach(el => {
+                    el.disabled = false;
+                    el.classList.remove('opacity-75', 'cursor-not-allowed');
+                });
+            } else {
+                roleBadge.className = "text-[10px] bg-emerald-400 text-slate-950 px-2 py-0.5 rounded-full font-black uppercase";
+                roleBadge.innerText = `KP: ${sessionAuth.subjek}`;
+                tabAdmin.classList.add('hidden');
+                kpPassCard.classList.remove('hidden');
+                cfgSubjek.disabled = true; // KP locked to their own subject
+                document.getElementById('schoolScopeNote').innerText = "Akses Ketua Panitia";
+                document.getElementById('logoUploadOverlay').classList.add('hidden');
+                document.getElementById('btnResetLogo').classList.add('hidden');
+                document.getElementById('kpLogoLockHint').classList.remove('hidden');
+                document.querySelectorAll('.school-global-input').forEach(el => {
+                    el.disabled = true;
+                    el.classList.add('opacity-75', 'cursor-not-allowed');
+                });
+            }
+
+            await loadSubjectFromCloud(sessionAuth.subjek);
+
+            if (isAdmin) {
+                await refreshAdminDashboard();
+                switchTab('admin');
+            } else {
+                switchTab('profil');
+            }
+        }
+
+        function logoutSystem() {
+            if (hasUnsavedChanges) {
+                if (!confirm("Terdapat perubahan yang belum selesai disimpan. Pasti mahu log keluar?")) return;
+            }
+            sessionStorage.removeItem('panitia_kpm_cloud_session');
+            location.reload();
+        }
+
+        // ==================== CLOUD DATA SYNC ====================
+        async function loadSubjectFromCloud(subjekName) {
+            setSyncStatus('saving', 'Memuatkan data subjek...');
+            try {
+                const [schoolRes, subjRes] = await Promise.all([
+                    sb.from('school_settings').select('*').eq('id', 1).single(),
+                    sb.from('panitia_data').select('*').eq('subjek', subjekName).single()
+                ]);
+
+                if (schoolRes.data) {
+                    const sc = schoolRes.data;
+                    state.profil.namaSekolah = sc.nama_sekolah;
+                    state.profil.kodSekolah = sc.kod_sekolah;
+                    state.profil.tahunStrategik = sc.tahun_strategik;
+                    state.profil.pengetua = sc.pengetua;
+                    state.profil.gpk = sc.gpk;
+                    state.logoBase64 = sc.logo_base64;
+                }
+
+                if (subjRes.data) {
+                    const d = subjRes.data;
+                    state.profil.subjek = d.subjek;
+                    state.profil.ketuaPanitia = d.ketua_panitia || '';
+                    state.profil.penolongKP = d.penolong_kp || '';
+                    state.profil.setiausaha = d.setiausaha || '';
+                    state.profil.ajk = d.ajk || '';
+                    state.swot = d.swot || { s: '', w: '', o: '', c: '' };
+                    state.strategik = Array.isArray(d.strategik) ? d.strategik : [];
+                    state.taktikal = Array.isArray(d.taktikal) ? d.taktikal : [];
+                    state.oppm = d.oppm || {};
+                    state.operasi = d.operasi || {};
+                }
+
+                sessionAuth.subjek = subjekName;
+                if (sessionAuth.role === 'admin') {
+                    document.getElementById('adminSubjectBanner').classList.remove('hidden');
+                    document.getElementById('adminBannerSubjekName').innerText = subjekName;
+                }
+
+                ensureSync();
+                loadProfilToInputs();
+                renderStatCards();
+                renderStrategikTable();
+                renderTaktikalTable();
+                renderOPPMBoard();
+                renderOperasiEditor();
+                renderPrintDocument();
+                setSyncStatus('saved', 'Disimpan ke Cloud');
+            } catch (err) {
+                console.error(err);
+                setSyncStatus('error', 'Gagal memuatkan subjek');
+            }
+        }
+
+        function saveData() {
+            // Read current input values into state
+            state.profil.ketuaPanitia = document.getElementById('cfg-ketuaPanitia').value;
+            state.profil.penolongKP = document.getElementById('cfg-penolongKP').value;
+            state.profil.setiausaha = document.getElementById('cfg-setiausaha').value;
+            state.profil.ajk = document.getElementById('cfg-ajk').value;
+
+            state.swot.s = document.getElementById('swot-s').value;
+            state.swot.w = document.getElementById('swot-w').value;
+            state.swot.o = document.getElementById('swot-o').value;
+            state.swot.c = document.getElementById('swot-c').value;
+
+            renderStatCards();
+            renderPrintDocument();
+
+            hasUnsavedChanges = true;
+            setSyncStatus('saving', 'Menyimpan perubahan...');
+
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                pushPanitiaToCloud();
+            }, 1000);
+        }
+
+        function onSchoolSettingChange() {
+            if (sessionAuth.role !== 'admin') return;
+            state.profil.namaSekolah = document.getElementById('cfg-namaSekolah').value;
+            state.profil.kodSekolah = document.getElementById('cfg-kodSekolah').value;
+            state.profil.tahunStrategik = document.getElementById('cfg-tahunStrategik').value;
+            state.profil.pengetua = document.getElementById('cfg-pengetua').value;
+            state.profil.gpk = document.getElementById('cfg-gpk').value;
+            document.getElementById('headerSchoolName').innerText = state.profil.namaSekolah;
+
+            renderPrintDocument();
+            hasUnsavedChanges = true;
+            setSyncStatus('saving', 'Menyimpan tetapan sekolah...');
+
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                pushSchoolSettingsToCloud();
+            }, 1000);
+        }
+
+        async function forceSaveNow() {
+            clearTimeout(saveTimer);
+            await pushPanitiaToCloud();
+            if (sessionAuth.role === 'admin') {
+                await pushSchoolSettingsToCloud();
+            }
+        }
+
+        async function pushPanitiaToCloud() {
+            if (!sb || !sessionAuth.loggedIn) return;
+            setSyncStatus('saving', 'Menyimpan ke awan...');
+
+            try {
+                const { data, error } = await sb.rpc('save_panitia_record', {
+                    p_role: sessionAuth.role,
+                    p_password: sessionAuth.password,
+                    p_subjek: state.profil.subjek,
+                    p_ketua_panitia: state.profil.ketuaPanitia,
+                    p_penolong_kp: state.profil.penolongKP,
+                    p_setiausaha: state.profil.setiausaha,
+                    p_ajk: state.profil.ajk,
+                    p_swot: state.swot,
+                    p_strategik: state.strategik,
+                    p_taktikal: state.taktikal,
+                    p_oppm: state.oppm,
+                    p_operasi: state.operasi
+                });
+
+                if (error) throw error;
+                if (data && data.success) {
+                    hasUnsavedChanges = false;
+                    setSyncStatus('saved', 'Disimpan ke Cloud');
+                } else {
+                    setSyncStatus('error', (data && data.message) || 'Gagal simpan');
+                }
+            } catch (err) {
+                console.error(err);
+                setSyncStatus('error', 'Ralat sambungan');
+            }
+        }
+
+        async function pushSchoolSettingsToCloud() {
+            if (!sb || sessionAuth.role !== 'admin') return;
+            try {
+                const { data, error } = await sb.rpc('save_school_settings', {
+                    p_admin_password: sessionAuth.password,
+                    p_nama_sekolah: state.profil.namaSekolah,
+                    p_kod_sekolah: state.profil.kodSekolah,
+                    p_tahun_strategik: state.profil.tahunStrategik,
+                    p_pengetua: state.profil.pengetua,
+                    p_gpk: state.profil.gpk,
+                    p_logo_base64: state.logoBase64
+                });
+                if (error) throw error;
+                if (data && data.success) {
+                    hasUnsavedChanges = false;
+                    setSyncStatus('saved', 'Disimpan ke Cloud');
+                }
+            } catch (err) {
+                console.error(err);
+                setSyncStatus('error', 'Ralat simpan tetapan sekolah');
+            }
+        }
+
+        // ==================== ADMIN DASHBOARD & PASSWORD CONTROLS ====================
+        async function refreshAdminDashboard() {
+            if (sessionAuth.role !== 'admin') return;
+            const { data, error } = await sb
+                .from('panitia_data')
+                .select('subjek, tahap, ketua_panitia, taktikal, updated_at')
+                .order('tahap', { ascending: true })
+                .order('subjek', { ascending: true });
+
+            if (!error && data) {
+                allPanitiaCache = data;
+                let schoolBudget = 0;
+                let schoolPrograms = 0;
+
+                data.forEach(row => {
+                    const progs = Array.isArray(row.taktikal) ? row.taktikal : [];
+                    schoolPrograms += progs.length;
+                    progs.forEach(p => { schoolBudget += parseFloat(p.kos || 0); });
+                });
+
+                document.getElementById('admin-total-panitia').innerText = `${data.length} Subjek`;
+                document.getElementById('admin-total-bajet').innerText = `RM ${schoolBudget.toFixed(2)}`;
+                document.getElementById('admin-total-program').innerText = `${schoolPrograms} Program`;
+                renderAdminTable();
+            }
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('tbl-admin-panitia');
+            const filterTahap = document.getElementById('adminFilterTahap').value;
+            const keyword = document.getElementById('adminSearchSubjek').value.toLowerCase();
+
+            tbody.innerHTML = '';
+            const filtered = allPanitiaCache.filter(item => {
+                const matchTahap = filterTahap === 'ALL' || item.tahap === filterTahap;
+                const matchText = item.subjek.toLowerCase().includes(keyword) || (item.ketua_panitia || '').toLowerCase().includes(keyword);
+                return matchTahap && matchText;
+            });
+
+            filtered.forEach((item, idx) => {
+                const progs = Array.isArray(item.taktikal) ? item.taktikal : [];
+                const totalKos = progs.reduce((acc, p) => acc + (parseFloat(p.kos) || 0), 0);
+                const updatedStr = item.updated_at ? new Date(item.updated_at).toLocaleString('ms-MY', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-100 hover:bg-indigo-50/40 transition";
+                tr.innerHTML = `
+                    <td class="p-3 text-center font-bold text-slate-500">${idx + 1}</td>
+                    <td class="p-3 font-extrabold text-slate-800">${escapeAttr(item.subjek)}</td>
+                    <td class="p-3 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${item.tahap === 'SMK' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}">${item.tahap}</span>
+                    </td>
+                    <td class="p-3 font-medium text-slate-700">${escapeAttr(item.ketua_panitia || '-')}</td>
+                    <td class="p-3 text-center font-bold">${progs.length}</td>
+                    <td class="p-3 text-right font-bold text-emerald-700">${totalKos.toFixed(2)}</td>
+                    <td class="p-3 text-[11px] text-slate-500">${updatedStr}</td>
+                    <td class="p-3 text-center space-x-1">
+                        <button onclick="adminInspectSubject('${escapeAttr(item.subjek)}')" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition" title="Buka & Semak Dokumen">
+                            <i class="fa-solid fa-folder-open"></i> Buka
+                        </button>
+                        <button onclick="openSetPassModal('${escapeAttr(item.subjek)}')" class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg font-extrabold transition" title="Tukar Kata Laluan Ketua Panitia">
+                            <i class="fa-solid fa-key"></i> Kata Laluan
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function adminInspectSubject(subjekName) {
+            await loadSubjectFromCloud(subjekName);
+            switchTab('profil');
+        }
+
+        async function onAdminSwitchSubject(subjekName) {
+            if (sessionAuth.role === 'admin') {
+                await loadSubjectFromCloud(subjekName);
+            }
+        }
+
+        async function updateAdminPassword() {
+            const newPass = document.getElementById('adminNewPassInput').value.trim();
+            if (newPass.length < 4) {
+                alert("Kata laluan baharu mesti sekurang-kurangnya 4 aksara.");
+                return;
+            }
+            const { data, error } = await sb.rpc('admin_set_password', {
+                p_admin_password: sessionAuth.password,
+                p_target_role: 'admin',
+                p_target_subjek: null,
+                p_new_password: newPass
+            });
+            if (error) {
+                alert("Ralat: " + error.message);
+                return;
+            }
+            if (data && data.success) {
+                sessionAuth.password = newPass;
+                sessionStorage.setItem('panitia_kpm_cloud_session', JSON.stringify(sessionAuth));
+                document.getElementById('adminNewPassInput').value = '';
+                alert("Kata laluan Pentadbir berjaya dikemaskini!");
+            } else {
+                alert((data && data.message) || "Gagal mengemaskini kata laluan.");
+            }
+        }
+
+        function openSetPassModal(subjekName) {
+            document.getElementById('modalTargetSubjekLabel').innerText = subjekName;
+            document.getElementById('modalTargetSubjekValue').value = subjekName;
+            document.getElementById('modalNewKpPass').value = '';
+            document.getElementById('adminSetPassModal').classList.remove('hidden');
+        }
+
+        function closeSetPassModal() {
+            document.getElementById('adminSetPassModal').classList.add('hidden');
+        }
+
+        async function confirmSetSubjectPassword() {
+            const subjekName = document.getElementById('modalTargetSubjekValue').value;
+            const newPass = document.getElementById('modalNewKpPass').value.trim();
+            if (newPass.length < 4) {
+                alert("Kata laluan mesti sekurang-kurangnya 4 aksara.");
+                return;
+            }
+            const { data, error } = await sb.rpc('admin_set_password', {
+                p_admin_password: sessionAuth.password,
+                p_target_role: 'kp',
+                p_target_subjek: subjekName,
+                p_new_password: newPass
+            });
+            if (error) {
+                alert("Ralat: " + error.message);
+                return;
+            }
+            if (data && data.success) {
+                closeSetPassModal();
+                alert(`Kata laluan baharu untuk Panitia ${subjekName} telah disimpan!`);
+            } else {
+                alert((data && data.message) || "Gagal menetapkan kata laluan.");
+            }
+        }
+
+        async function kpChangeOwnPassword() {
+            const oldPass = document.getElementById('kpOldPass').value;
+            const newPass = document.getElementById('kpNewPass').value.trim();
+            if (newPass.length < 4) {
+                alert("Kata laluan baharu mesti sekurang-kurangnya 4 aksara.");
+                return;
+            }
+            const { data, error } = await sb.rpc('kp_change_own_password', {
+                p_subjek: sessionAuth.subjek,
+                p_old_password: oldPass,
+                p_new_password: newPass
+            });
+            if (error) {
+                alert("Ralat: " + error.message);
+                return;
+            }
+            if (data && data.success) {
+                sessionAuth.password = newPass;
+                sessionStorage.setItem('panitia_kpm_cloud_session', JSON.stringify(sessionAuth));
+                document.getElementById('kpOldPass').value = '';
+                document.getElementById('kpNewPass').value = '';
+                alert("Kata laluan anda telah berjaya ditukar!");
+            } else {
+                alert((data && data.message) || "Kata laluan semasa salah.");
+            }
+        }
+
+        // ==================== CORE MODULE LOGIC (UNCHANGED UX + CLOUD SYNC) ====================
         function ensureSync() {
             if (!state.operasi) state.operasi = {};
             if (!state.oppm) state.oppm = {};
 
             state.taktikal.forEach(prog => {
-                // Sync Operasi 1:1
                 if (!state.operasi[prog.id]) {
                     state.operasi[prog.id] = {
                         tujuan: `Meningkatkan tahap penguasaan murid dalam subjek ${state.profil.subjek} melalui ${prog.nama}.`,
@@ -609,10 +1352,9 @@
                         ]
                     };
                 }
-                // Sync OPPM 1:1
                 if (!state.oppm[prog.id]) {
                     state.oppm[prog.id] = {
-                        gantt: [false, false, true, true, true, false, false, false, false, false, false, false], // 12-Bulan (Jan-Dis)
+                        gantt: [false, false, true, true, true, false, false, false, false, false, false, false],
                         objA: true, objB: true, objC: false,
                         kp: true, su: true, ajk: true
                     };
@@ -630,11 +1372,11 @@
             state.strategik.forEach(s => { sumETR += parseFloat(s.etr || 0); });
             const avgETR = state.strategik.length > 0 ? (sumETR / state.strategik.length).toFixed(0) : 0;
             document.getElementById('stat-etr').innerText = `${avgETR}%`;
-
             document.getElementById('stat-subjek').innerText = state.profil.subjek;
         }
 
         function loadProfilToInputs() {
+            document.getElementById('headerSchoolName').innerText = state.profil.namaSekolah;
             document.getElementById('cfg-namaSekolah').value = state.profil.namaSekolah;
             document.getElementById('cfg-kodSekolah').value = state.profil.kodSekolah;
             document.getElementById('cfg-subjek').value = state.profil.subjek;
@@ -657,48 +1399,46 @@
             }
         }
 
-        function saveData() {
-            state.profil.namaSekolah = document.getElementById('cfg-namaSekolah').value;
-            state.profil.kodSekolah = document.getElementById('cfg-kodSekolah').value;
-            state.profil.subjek = document.getElementById('cfg-subjek').value;
-            state.profil.tahunStrategik = document.getElementById('cfg-tahunStrategik').value;
-            state.profil.pengetua = document.getElementById('cfg-pengetua').value;
-            state.profil.gpk = document.getElementById('cfg-gpk').value;
-            state.profil.ketuaPanitia = document.getElementById('cfg-ketuaPanitia').value;
-            state.profil.penolongKP = document.getElementById('cfg-penolongKP').value;
-            state.profil.setiausaha = document.getElementById('cfg-setiausaha').value;
-            state.profil.ajk = document.getElementById('cfg-ajk').value;
-
-            state.swot.s = document.getElementById('swot-s').value;
-            state.swot.w = document.getElementById('swot-w').value;
-            state.swot.o = document.getElementById('swot-o').value;
-            state.swot.c = document.getElementById('swot-c').value;
-
-            localStorage.setItem('panitia_kpm_oppm_exec_data', JSON.stringify(state));
-            renderStatCards();
-            renderPrintDocument();
-        }
-
+        // Compress logo image before saving to Supabase so payload stays lightweight
         function handleLogoUpload(event) {
+            if (sessionAuth.role !== 'admin') return;
             const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    state.logoBase64 = e.target.result;
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 260;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                        else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+
+                    state.logoBase64 = canvas.toDataURL('image/png', 0.85);
                     document.getElementById('schoolLogoPreview').src = state.logoBase64;
                     document.getElementById('headerLogoImg').src = state.logoBase64;
-                    saveData();
+                    onSchoolSettingChange();
                 };
-                reader.readAsDataURL(file);
-            }
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
         function resetLogo() {
+            if (sessionAuth.role !== 'admin') return;
             const defaultLogo = 'https://upload.wikimedia.org/wikipedia/commons/9/9c/Coat_of_arms_of_Malaysia.svg';
             state.logoBase64 = defaultLogo;
             document.getElementById('schoolLogoPreview').src = defaultLogo;
             document.getElementById('headerLogoImg').src = defaultLogo;
-            saveData();
+            onSchoolSettingChange();
         }
 
         function setViewportMode(mode) {
@@ -711,28 +1451,36 @@
             if (mode === 'mobile') {
                 container.classList.add('mobile-viewport');
                 notch.classList.remove('hidden');
-                btnMob.className = "px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 bg-indigo-600 text-white shadow-md transition";
-                btnDesk.className = "px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 text-white/70 hover:text-white transition";
+                btnMob.className = "px-2.5 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 bg-indigo-600 text-white shadow-md transition";
+                btnDesk.className = "px-2.5 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 text-white/70 hover:text-white transition";
             } else {
                 container.classList.remove('mobile-viewport');
                 notch.classList.add('hidden');
-                btnDesk.className = "px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 bg-indigo-600 text-white shadow-md transition";
-                btnMob.className = "px-3 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 text-white/70 hover:text-white transition";
+                btnDesk.className = "px-2.5 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 bg-indigo-600 text-white shadow-md transition";
+                btnMob.className = "px-2.5 py-1.5 rounded-lg font-bold flex items-center space-x-1.5 text-white/70 hover:text-white transition";
             }
-            saveData();
         }
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.className = "nav-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50";
+                if (btn.id === 'tab-admin') {
+                    btn.className = `${sessionAuth.role === 'admin' ? '' : 'hidden'} nav-btn flex-1 min-w-[130px] py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200`;
+                } else {
+                    btn.className = "nav-btn flex-1 min-w-[115px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-50";
+                }
             });
 
             document.getElementById(`sec-${tabId}`).classList.remove('hidden');
             const activeBtn = document.getElementById(`tab-${tabId}`);
             if (activeBtn) {
-                activeBtn.className = "nav-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-indigo-600 bg-indigo-50 border border-indigo-200 shadow-sm";
+                if (tabId === 'admin') {
+                    activeBtn.className = "nav-btn flex-1 min-w-[130px] py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 text-slate-950 bg-amber-400 border border-amber-500 shadow-sm";
+                } else {
+                    activeBtn.className = "nav-btn flex-1 min-w-[115px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-indigo-600 bg-indigo-50 border border-indigo-200 shadow-sm";
+                }
             }
+            if (tabId === 'admin') refreshAdminDashboard();
             if (tabId === 'oppm') renderOPPMBoard();
             if (tabId === 'operasi') renderOperasiEditor();
             if (tabId === 'cetak') renderPrintDocument();
@@ -746,12 +1494,12 @@
                 tr.className = "border-b border-slate-100 hover:bg-slate-50/80 transition";
                 tr.innerHTML = `
                     <td class="p-2.5 text-center font-bold text-slate-500">${idx + 1}</td>
-                    <td class="p-2"><textarea oninput="updateStrategikRow(${row.id}, 'isu', this.value)" rows="2" class="w-full p-2 border rounded-lg bg-slate-50 focus:bg-white">${row.isu}</textarea></td>
-                    <td class="p-2"><textarea oninput="updateStrategikRow(${row.id}, 'KPI', this.value)" rows="2" class="w-full p-2 border rounded-lg bg-slate-50 focus:bg-white">${row.KPI}</textarea></td>
-                    <td class="p-2"><input type="text" value="${row.tov}" oninput="updateStrategikRow(${row.id}, 'tov', this.value)" class="w-full p-2 border rounded-lg text-center font-semibold"></td>
-                    <td class="p-2"><input type="text" value="${row.oti1}" oninput="updateStrategikRow(${row.id}, 'oti1', this.value)" class="w-full p-2 border rounded-lg text-center font-semibold"></td>
-                    <td class="p-2"><input type="text" value="${row.oti2}" oninput="updateStrategikRow(${row.id}, 'oti2', this.value)" class="w-full p-2 border rounded-lg text-center font-semibold"></td>
-                    <td class="p-2"><input type="text" value="${row.etr}" oninput="updateStrategikRow(${row.id}, 'etr', this.value)" class="w-full p-2 border rounded-lg text-center font-bold text-emerald-600"></td>
+                    <td class="p-2"><textarea oninput="updateStrategikRow(${row.id}, 'isu', this.value)" rows="2" class="w-full p-2 border rounded-lg bg-slate-50 focus:bg-white">${escapeAttr(row.isu)}</textarea></td>
+                    <td class="p-2"><textarea oninput="updateStrategikRow(${row.id}, 'KPI', this.value)" rows="2" class="w-full p-2 border rounded-lg bg-slate-50 focus:bg-white">${escapeAttr(row.KPI)}</textarea></td>
+                    <td class="p-2"><input type="text" value="${escapeAttr(row.tov)}" oninput="updateStrategikRow(${row.id}, 'tov', this.value)" class="w-full p-2 border rounded-lg text-center font-semibold"></td>
+                    <td class="p-2"><input type="text" value="${escapeAttr(row.oti1)}" oninput="updateStrategikRow(${row.id}, 'oti1', this.value)" class="w-full p-2 border rounded-lg text-center font-semibold"></td>
+                    <td class="p-2"><input type="text" value="${escapeAttr(row.oti2)}" oninput="updateStrategikRow(${row.id}, 'oti2', this.value)" class="w-full p-2 border rounded-lg text-center font-semibold"></td>
+                    <td class="p-2"><input type="text" value="${escapeAttr(row.etr)}" oninput="updateStrategikRow(${row.id}, 'etr', this.value)" class="w-full p-2 border rounded-lg text-center font-bold text-emerald-600"></td>
                     <td class="p-2 text-center">
                         <button onclick="deleteStrategikRow(${row.id})" class="text-rose-500 hover:text-rose-700 p-1.5"><i class="fa-solid fa-trash-can"></i></button>
                     </td>
@@ -791,11 +1539,11 @@
                 tr.className = "border-b border-slate-100 hover:bg-slate-50/80 transition";
                 tr.innerHTML = `
                     <td class="p-2.5 text-center font-bold text-slate-500">${idx + 1}</td>
-                    <td class="p-2"><input type="text" value="${row.nama}" oninput="updateTaktikalRow(${row.id}, 'nama', this.value)" class="w-full p-2 border rounded-lg font-medium"></td>
-                    <td class="p-2"><input type="text" value="${row.resp}" oninput="updateTaktikalRow(${row.id}, 'resp', this.value)" class="w-full p-2 border rounded-lg"></td>
-                    <td class="p-2"><input type="text" value="${row.tempoh}" oninput="updateTaktikalRow(${row.id}, 'tempoh', this.value)" class="w-full p-2 border rounded-lg"></td>
-                    <td class="p-2"><input type="number" value="${row.kos}" oninput="updateTaktikalRow(${row.id}, 'kos', this.value)" class="w-full p-2 border rounded-lg text-right font-semibold"></td>
-                    <td class="p-2"><input type="text" value="${row.kpi}" oninput="updateTaktikalRow(${row.id}, 'kpi', this.value)" class="w-full p-2 border rounded-lg"></td>
+                    <td class="p-2"><input type="text" value="${escapeAttr(row.nama)}" oninput="updateTaktikalRow(${row.id}, 'nama', this.value)" class="w-full p-2 border rounded-lg font-medium"></td>
+                    <td class="p-2"><input type="text" value="${escapeAttr(row.resp)}" oninput="updateTaktikalRow(${row.id}, 'resp', this.value)" class="w-full p-2 border rounded-lg"></td>
+                    <td class="p-2"><input type="text" value="${escapeAttr(row.tempoh)}" oninput="updateTaktikalRow(${row.id}, 'tempoh', this.value)" class="w-full p-2 border rounded-lg"></td>
+                    <td class="p-2"><input type="number" step="0.01" value="${escapeAttr(row.kos)}" oninput="updateTaktikalRow(${row.id}, 'kos', this.value)" class="w-full p-2 border rounded-lg text-right font-semibold"></td>
+                    <td class="p-2"><input type="text" value="${escapeAttr(row.kpi)}" oninput="updateTaktikalRow(${row.id}, 'kpi', this.value)" class="w-full p-2 border rounded-lg"></td>
                     <td class="p-2 text-center">
                         <button onclick="deleteTaktikalRow(${row.id})" class="text-rose-500 hover:text-rose-700 p-1.5"><i class="fa-solid fa-trash-can"></i></button>
                     </td>
@@ -826,8 +1574,12 @@
             const item = state.taktikal.find(x => x.id === id);
             if (item) {
                 item[field] = value;
-                renderTaktikalTable();
-                renderOPPMBoard();
+                if (field === 'kos') {
+                    let totalKos = 0;
+                    state.taktikal.forEach(t => { totalKos += parseFloat(t.kos || 0); });
+                    document.getElementById('lbl-total-bajet').innerText = totalKos.toFixed(2);
+                }
+                if (field === 'nama') renderOPPMBoard();
                 saveData();
             }
         }
@@ -842,7 +1594,6 @@
             saveData();
         }
 
-        // RENDER OPPM BOARD (INTERACTIVE GANTT & MATRIX)
         function renderOPPMBoard() {
             ensureSync();
             const tbody = document.getElementById('tbl-oppm-body');
@@ -855,7 +1606,7 @@
 
             state.taktikal.forEach((prog, idx) => {
                 const oppmData = state.oppm[prog.id] || {
-                    gantt: [false,false,false,false,false,false,false,false,false,false,false,false],
+                    gantt: Array(12).fill(false),
                     objA: true, objB: false, objC: false, kp: true, su: true, ajk: true
                 };
 
@@ -874,13 +1625,11 @@
 
                 tr.innerHTML = `
                     <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
-                    <td class="p-2 font-semibold text-slate-800">${prog.nama}</td>
+                    <td class="p-2 font-semibold text-slate-800">${escapeAttr(prog.nama)}</td>
                     ${ganttHtml}
-                    <!-- OBJEKIF -->
                     <td class="p-1 text-center border cursor-pointer ${oppmData.objA ? 'bg-indigo-600 text-white font-bold' : ''}" onclick="toggleOPPMField(${prog.id}, 'objA')">${oppmData.objA ? '✓' : ''}</td>
                     <td class="p-1 text-center border cursor-pointer ${oppmData.objB ? 'bg-indigo-600 text-white font-bold' : ''}" onclick="toggleOPPMField(${prog.id}, 'objB')">${oppmData.objB ? '✓' : ''}</td>
                     <td class="p-1 text-center border cursor-pointer ${oppmData.objC ? 'bg-indigo-600 text-white font-bold' : ''}" onclick="toggleOPPMField(${prog.id}, 'objC')">${oppmData.objC ? '✓' : ''}</td>
-                    <!-- TANGGUNGJAWAB -->
                     <td class="p-1 text-center border cursor-pointer ${oppmData.kp ? 'bg-emerald-600 text-white font-bold' : ''}" onclick="toggleOPPMField(${prog.id}, 'kp')">${oppmData.kp ? '✓' : ''}</td>
                     <td class="p-1 text-center border cursor-pointer ${oppmData.su ? 'bg-emerald-600 text-white font-bold' : ''}" onclick="toggleOPPMField(${prog.id}, 'su')">${oppmData.su ? '✓' : ''}</td>
                     <td class="p-1 text-center border cursor-pointer ${oppmData.ajk ? 'bg-emerald-600 text-white font-bold' : ''}" onclick="toggleOPPMField(${prog.id}, 'ajk')">${oppmData.ajk ? '✓' : ''}</td>
@@ -908,6 +1657,7 @@
         function renderOperasiEditor() {
             ensureSync();
             const sel = document.getElementById('sel-operasi-program');
+            const prevSelected = sel.value;
             sel.innerHTML = '';
 
             if (state.taktikal.length === 0) {
@@ -922,7 +1672,7 @@
                 sel.appendChild(opt);
             });
 
-            const activeId = parseInt(sel.value) || state.taktikal[0].id;
+            const activeId = state.taktikal.some(t => String(t.id) === String(prevSelected)) ? Number(prevSelected) : state.taktikal[0].id;
             sel.value = activeId;
             const opData = state.operasi[activeId];
 
@@ -931,12 +1681,12 @@
                 <div class="bg-cyan-50/40 p-4 rounded-xl border border-cyan-200 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Objektif & Tujuan Program</label>
-                        <textarea oninput="updateOperasiData(${activeId}, 'tujuan', this.value)" rows="3" class="w-full p-2 border rounded-lg bg-white">${opData.tujuan}</textarea>
+                        <textarea oninput="updateOperasiData(${activeId}, 'tujuan', this.value)" rows="3" class="w-full p-2 border rounded-lg bg-white">${escapeAttr(opData.tujuan)}</textarea>
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Kumpulan Sasaran & Tempat</label>
-                        <input type="text" value="${opData.kumpulan}" oninput="updateOperasiData(${activeId}, 'kumpulan', this.value)" class="w-full p-2 border rounded-lg bg-white mb-2" placeholder="Kumpulan Sasaran">
-                        <input type="text" value="${opData.tempat}" oninput="updateOperasiData(${activeId}, 'tempat', this.value)" class="w-full p-2 border rounded-lg bg-white" placeholder="Tempat Pelaksanaan">
+                        <input type="text" value="${escapeAttr(opData.kumpulan)}" oninput="updateOperasiData(${activeId}, 'kumpulan', this.value)" class="w-full p-2 border rounded-lg bg-white mb-2" placeholder="Kumpulan Sasaran">
+                        <input type="text" value="${escapeAttr(opData.tempat)}" oninput="updateOperasiData(${activeId}, 'tempat', this.value)" class="w-full p-2 border rounded-lg bg-white" placeholder="Tempat Pelaksanaan">
                     </div>
                 </div>
 
@@ -947,8 +1697,8 @@
                     <div class="space-y-2.5">
                         ${opData.langkah.map((l, lIdx) => `
                             <div class="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-slate-50 p-2.5 rounded-lg border">
-                                <span class="font-bold text-cyan-700 min-w-[150px] text-xs">${l.fasa}</span>
-                                <input type="text" value="${l.butiran}" oninput="updateOperasiLangkah(${activeId}, ${lIdx}, this.value)" class="w-full p-2 border rounded-lg text-xs bg-white">
+                                <span class="font-bold text-cyan-700 min-w-[150px] text-xs">${escapeAttr(l.fasa)}</span>
+                                <input type="text" value="${escapeAttr(l.butiran)}" oninput="updateOperasiLangkah(${activeId}, ${lIdx}, this.value)" class="w-full p-2 border rounded-lg text-xs bg-white">
                             </div>
                         `).join('')}
                     </div>
@@ -982,12 +1732,12 @@
                     </div>
 
                     <div class="space-y-4 my-auto">
-                        <h1 class="text-2xl md:text-3xl font-extrabold uppercase tracking-wide text-slate-900">${state.profil.namaSekolah}</h1>
-                        <p class="text-sm font-semibold text-slate-600">KOD SEKOLAH: ${state.profil.kodSekolah}</p>
+                        <h1 class="text-2xl md:text-3xl font-extrabold uppercase tracking-wide text-slate-900">${escapeAttr(state.profil.namaSekolah)}</h1>
+                        <p class="text-sm font-semibold text-slate-600">KOD SEKOLAH: ${escapeAttr(state.profil.kodSekolah)}</p>
                         <div class="w-24 h-1 bg-indigo-600 mx-auto rounded-full my-4"></div>
                         <h2 class="text-xl md:text-2xl font-bold text-indigo-950 uppercase">PERANCANGAN STRATEGIK, OPPM & PELAN OPERASI</h2>
-                        <h3 class="text-lg font-bold text-slate-800">PANITIA ${state.profil.subjek.toUpperCase()}</h3>
-                        <p class="text-base font-semibold text-slate-700">SESI AKADEMIK / TAHUN: ${state.profil.tahunStrategik}</p>
+                        <h3 class="text-lg font-bold text-slate-800">PANITIA ${escapeAttr(state.profil.subjek.toUpperCase())}</h3>
+                        <p class="text-base font-semibold text-slate-700">SESI AKADEMIK / TAHUN: ${escapeAttr(state.profil.tahunStrategik)}</p>
                     </div>
 
                     <div class="w-full text-xs text-slate-500 pt-8 border-t border-slate-200">
@@ -997,25 +1747,25 @@
 
                 <!-- CARTA ORGANISASI -->
                 <div class="print-page-break pt-8">
-                    <h2 class="text-base font-bold text-slate-900 uppercase mb-4 border-b pb-2">1. CARTA ORGANISASI PANITIA ${state.profil.subjek.toUpperCase()}</h2>
+                    <h2 class="text-base font-bold text-slate-900 uppercase mb-4 border-b pb-2">1. CARTA ORGANISASI PANITIA ${escapeAttr(state.profil.subjek.toUpperCase())}</h2>
                     <div class="border rounded-xl p-6 bg-slate-50 text-center space-y-4 text-xs">
                         <div class="bg-slate-900 text-white p-2.5 rounded-lg max-w-xs mx-auto font-bold shadow">
-                            PENGETUA / GURU BESAR<br><span class="font-normal text-slate-200">${state.profil.pengetua}</span>
+                            PENGETUA / GURU BESAR<br><span class="font-normal text-slate-200">${escapeAttr(state.profil.pengetua)}</span>
                         </div>
                         <div class="w-0.5 h-4 bg-slate-400 mx-auto"></div>
                         <div class="bg-indigo-900 text-white p-2.5 rounded-lg max-w-xs mx-auto font-bold shadow">
-                            PK PENTADBIRAN & KURIKULUM<br><span class="font-normal text-indigo-100">${state.profil.gpk}</span>
+                            PK PENTADBIRAN & KURIKULUM<br><span class="font-normal text-indigo-100">${escapeAttr(state.profil.gpk)}</span>
                         </div>
                         <div class="w-0.5 h-4 bg-slate-400 mx-auto"></div>
                         <div class="bg-emerald-800 text-white p-2.5 rounded-lg max-w-xs mx-auto font-bold shadow">
-                            KETUA PANITIA<br><span class="font-normal text-emerald-100">${state.profil.ketuaPanitia}</span>
+                            KETUA PANITIA<br><span class="font-normal text-emerald-100">${escapeAttr(state.profil.ketuaPanitia)}</span>
                         </div>
                         <div class="grid grid-cols-2 gap-4 max-w-md mx-auto pt-2">
                             <div class="bg-white border p-2 rounded-lg font-semibold shadow-sm">
-                                PENOLONG KP<br><span class="text-slate-600 font-normal">${state.profil.penolongKP}</span>
+                                PENOLONG KP<br><span class="text-slate-600 font-normal">${escapeAttr(state.profil.penolongKP)}</span>
                             </div>
                             <div class="bg-white border p-2 rounded-lg font-semibold shadow-sm">
-                                SETIAUSAHA<br><span class="text-slate-600 font-normal">${state.profil.setiausaha}</span>
+                                SETIAUSAHA<br><span class="text-slate-600 font-normal">${escapeAttr(state.profil.setiausaha)}</span>
                             </div>
                         </div>
                     </div>
@@ -1027,26 +1777,26 @@
                     <div class="grid grid-cols-2 gap-4 text-xs">
                         <div class="border p-3 rounded-lg bg-slate-50">
                             <h3 class="font-bold text-emerald-800 mb-1">KEKUATAN (STRENGTHS)</h3>
-                            <p class="whitespace-pre-line text-slate-700">${state.swot.s}</p>
+                            <p class="whitespace-pre-line text-slate-700">${escapeAttr(state.swot.s)}</p>
                         </div>
                         <div class="border p-3 rounded-lg bg-slate-50">
                             <h3 class="font-bold text-amber-800 mb-1">KELEMAHAN (WEAKNESSES)</h3>
-                            <p class="whitespace-pre-line text-slate-700">${state.swot.w}</p>
+                            <p class="whitespace-pre-line text-slate-700">${escapeAttr(state.swot.w)}</p>
                         </div>
                         <div class="border p-3 rounded-lg bg-slate-50">
                             <h3 class="font-bold text-blue-800 mb-1">PELUANG (OPPORTUNITIES)</h3>
-                            <p class="whitespace-pre-line text-slate-700">${state.swot.o}</p>
+                            <p class="whitespace-pre-line text-slate-700">${escapeAttr(state.swot.o)}</p>
                         </div>
                         <div class="border p-3 rounded-lg bg-slate-50">
                             <h3 class="font-bold text-rose-800 mb-1">CABARAN (THREATS)</h3>
-                            <p class="whitespace-pre-line text-slate-700">${state.swot.c}</p>
+                            <p class="whitespace-pre-line text-slate-700">${escapeAttr(state.swot.c)}</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- PELAN STRATEGIK -->
                 <div class="print-page-break pt-8">
-                    <h2 class="text-base font-bold text-slate-900 uppercase mb-4 border-b pb-2">3. PELAN STRATEGIK (${state.profil.tahunStrategik})</h2>
+                    <h2 class="text-base font-bold text-slate-900 uppercase mb-4 border-b pb-2">3. PELAN STRATEGIK (${escapeAttr(state.profil.tahunStrategik)})</h2>
                     <table class="w-full text-left text-xs border-collapse border border-slate-300">
                         <thead>
                             <tr class="bg-slate-100 font-bold border-b border-slate-300 text-slate-800">
@@ -1063,12 +1813,12 @@
                             ${state.strategik.map((s, idx) => `
                                 <tr>
                                     <td class="p-2 border border-slate-300 text-center font-bold">${idx + 1}</td>
-                                    <td class="p-2 border border-slate-300">${s.isu}</td>
-                                    <td class="p-2 border border-slate-300">${s.KPI}</td>
-                                    <td class="p-2 border border-slate-300 text-center">${s.tov}%</td>
-                                    <td class="p-2 border border-slate-300 text-center">${s.oti1}%</td>
-                                    <td class="p-2 border border-slate-300 text-center">${s.oti2}%</td>
-                                    <td class="p-2 border border-slate-300 text-center font-bold text-indigo-900">${s.etr}%</td>
+                                    <td class="p-2 border border-slate-300">${escapeAttr(s.isu)}</td>
+                                    <td class="p-2 border border-slate-300">${escapeAttr(s.KPI)}</td>
+                                    <td class="p-2 border border-slate-300 text-center">${escapeAttr(s.tov)}%</td>
+                                    <td class="p-2 border border-slate-300 text-center">${escapeAttr(s.oti1)}%</td>
+                                    <td class="p-2 border border-slate-300 text-center">${escapeAttr(s.oti2)}%</td>
+                                    <td class="p-2 border border-slate-300 text-center font-bold text-indigo-900">${escapeAttr(s.etr)}%</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -1097,7 +1847,7 @@
                                 return `
                                     <tr>
                                         <td class="p-1.5 border border-slate-300 text-center font-bold">${idx + 1}</td>
-                                        <td class="p-1.5 border border-slate-300 font-semibold">${t.nama}</td>
+                                        <td class="p-1.5 border border-slate-300 font-semibold">${escapeAttr(t.nama)}</td>
                                         ${oppm.gantt.map(g => `<td class="p-1 border border-slate-300 text-center font-bold ${g ? 'bg-slate-800 text-white' : ''}">${g ? '●' : ''}</td>`).join('')}
                                         <td class="p-1.5 border border-slate-300 text-right font-semibold">${parseFloat(t.kos || 0).toFixed(2)}</td>
                                     </tr>
@@ -1115,18 +1865,18 @@
                         return `
                             <div class="mb-8 border border-slate-300 rounded-lg p-4 bg-white shadow-sm break-inside-avoid">
                                 <div class="bg-indigo-950 text-white p-2 rounded font-bold text-xs mb-3">
-                                    PELAN OPERASI NO. ${idx + 1}: ${prog.nama.toUpperCase()}
+                                    PELAN OPERASI NO. ${idx + 1}: ${escapeAttr(prog.nama.toUpperCase())}
                                 </div>
                                 <div class="grid grid-cols-2 gap-2 text-xs mb-3 border-b pb-3">
-                                    <div><b>Tanggungjawab:</b> ${prog.resp}</div>
-                                    <div><b>Tempoh / Masa:</b> ${prog.tempoh}</div>
-                                    <div><b>Kumpulan Sasaran:</b> ${op.kumpulan}</div>
-                                    <div><b>Tempat Pelaksanaan:</b> ${op.tempat}</div>
-                                    <div class="col-span-2"><b>Tujuan / Objektif:</b> ${op.tujuan}</div>
+                                    <div><b>Tanggungjawab:</b> ${escapeAttr(prog.resp)}</div>
+                                    <div><b>Tempoh / Masa:</b> ${escapeAttr(prog.tempoh)}</div>
+                                    <div><b>Kumpulan Sasaran:</b> ${escapeAttr(op.kumpulan)}</div>
+                                    <div><b>Tempat Pelaksanaan:</b> ${escapeAttr(op.tempat)}</div>
+                                    <div class="col-span-2"><b>Tujuan / Objektif:</b> ${escapeAttr(op.tujuan)}</div>
                                 </div>
                                 <h4 class="font-bold text-xs text-slate-800 mb-2">Alur Kerja 6-Langkah Pelaksanaan:</h4>
                                 <ol class="list-decimal pl-4 text-xs space-y-1 text-slate-700">
-                                    ${op.langkah ? op.langkah.map(l => `<li><b>${l.fasa}:</b> ${l.butiran}</li>`).join('') : ''}
+                                    ${op.langkah ? op.langkah.map(l => `<li><b>${escapeAttr(l.fasa)}:</b> ${escapeAttr(l.butiran)}</li>`).join('') : ''}
                                 </ol>
                             </div>
                         `;
@@ -1139,21 +1889,21 @@
                     <div class="grid grid-cols-3 gap-4 text-xs text-center">
                         <div class="flex flex-col justify-between h-28 border-t border-slate-400 pt-2">
                             <div>
-                                <p class="font-bold">${state.profil.ketuaPanitia}</p>
+                                <p class="font-bold">${escapeAttr(state.profil.ketuaPanitia)}</p>
                                 <p class="text-[10px] text-slate-500">Disediakan oleh (Ketua Panitia)</p>
                             </div>
                             <p class="text-[10px]">Tarikh: ____________</p>
                         </div>
                         <div class="flex flex-col justify-between h-28 border-t border-slate-400 pt-2">
                             <div>
-                                <p class="font-bold">${state.profil.gpk}</p>
+                                <p class="font-bold">${escapeAttr(state.profil.gpk)}</p>
                                 <p class="text-[10px] text-slate-500">Disemak oleh (PK Pentadbiran)</p>
                             </div>
                             <p class="text-[10px]">Tarikh: ____________</p>
                         </div>
                         <div class="flex flex-col justify-between h-28 border-t border-slate-400 pt-2">
                             <div>
-                                <p class="font-bold">${state.profil.pengetua}</p>
+                                <p class="font-bold">${escapeAttr(state.profil.pengetua)}</p>
                                 <p class="text-[10px] text-slate-500">Disahkan oleh (Pengetua / Guru Besar)</p>
                             </div>
                             <p class="text-[10px]">Tarikh: ____________</p>
@@ -1161,11 +1911,6 @@
                     </div>
                 </div>
             `;
-        }
-
-        function onSubjectChange() {
-            saveData();
-            loadSWOTTemplate();
         }
 
         function loadSWOTTemplate() {
@@ -1196,15 +1941,45 @@
             const fileReader = new FileReader();
             fileReader.onload = function(e) {
                 try {
-                    state = JSON.parse(e.target.result);
-                    initApp();
-                    alert('Data panitia berjaya diimport!');
+                    const imported = JSON.parse(e.target.result);
+                    // Preserve active logged-in subject name so KP cannot overwrite another subject
+                    const lockedSubjek = state.profil.subjek;
+                    state.swot = imported.swot || state.swot;
+                    state.strategik = imported.strategik || state.strategik;
+                    state.taktikal = imported.taktikal || state.taktikal;
+                    state.oppm = imported.oppm || state.oppm;
+                    state.operasi = imported.operasi || state.operasi;
+                    if (imported.profil) {
+                        state.profil.ketuaPanitia = imported.profil.ketuaPanitia || state.profil.ketuaPanitia;
+                        state.profil.penolongKP = imported.profil.penolongKP || state.profil.penolongKP;
+                        state.profil.setiausaha = imported.profil.setiausaha || state.profil.setiausaha;
+                        state.profil.ajk = imported.profil.ajk || state.profil.ajk;
+                    }
+                    state.profil.subjek = lockedSubjek;
+
+                    ensureSync();
+                    loadProfilToInputs();
+                    renderStatCards();
+                    renderStrategikTable();
+                    renderTaktikalTable();
+                    renderOPPMBoard();
+                    renderOperasiEditor();
+                    renderPrintDocument();
+                    saveData();
+                    alert('Data panitia berjaya diimport dan sedang disegerakkan ke Cloud!');
                 } catch(err) {
                     alert('Ralat: Fail JSON tidak sah!');
                 }
             };
             fileReader.readAsText(event.target.files[0]);
         }
+
+        window.addEventListener('beforeunload', (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
 
         window.onload = initApp;
     </script>

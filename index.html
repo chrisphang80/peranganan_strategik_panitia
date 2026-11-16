@@ -47,16 +47,52 @@
                 size: A4 portrait;
                 margin: 12mm;
             }
-            body {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                box-sizing: border-box;
+            }
+            html, body {
                 background: white !important;
                 color: black !important;
                 font-size: 10pt;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .no-print {
                 display: none !important;
             }
+            #appContainer {
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .tab-content {
+                display: none !important;
+            }
+            #sec-cetak {
+                display: block !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .print-scroll-wrapper {
+                display: block !important;
+                overflow: visible !important;
+                width: 100% !important;
+            }
             .print-page-break {
-                page-break-before: always;
+                page-break-before: always !important;
+                break-before: page !important;
+            }
+            .cover-page-sheet {
+                height: 263mm !important;
+                max-height: 263mm !important;
+                min-height: 263mm !important;
+                overflow: hidden !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
             .mobile-viewport {
                 max-width: 100% !important;
@@ -72,6 +108,9 @@
                 padding: 0 !important;
                 border: none !important;
                 width: 100% !important;
+                max-width: 100% !important;
+                min-width: 100% !important;
+                display: block !important;
             }
         }
     </style>
@@ -666,7 +705,7 @@
                     </button>
                 </div>
 
-                <div class="overflow-x-auto w-full max-w-full flex justify-center">
+                <div class="print-scroll-wrapper overflow-x-auto w-full max-w-full flex justify-center">
                     <div id="a4-print-area" class="a4-container bg-white p-8 md:p-12 shadow-2xl rounded-2xl border border-slate-300 min-w-[210mm] max-w-[210mm] text-black"></div>
                 </div>
             </section>
@@ -1725,23 +1764,79 @@
             const logo = state.logoBase64 || 'https://upload.wikimedia.org/wikipedia/commons/9/9c/Coat_of_arms_of_Malaysia.svg';
 
             area.innerHTML = `
-                <!-- MUKA DEPAN -->
-                <div class="flex flex-col justify-between items-center text-center min-h-[250mm] py-12 border-b-2 border-slate-900">
-                    <div class="w-full flex justify-center mt-6">
-                        <img src="${logo}" class="h-28 w-auto object-contain">
+                <!-- MUKA DEPAN (REKA BENTUK RASMI KPM - KHUSUS KULIT DOKUMEN SAHAJA) -->
+                <div class="cover-page-sheet relative flex flex-col justify-between items-center text-center h-[263mm] px-10 py-10 border-[4px] border-double border-slate-900 bg-white">
+                    
+                    <!-- Hiasan Bucu Rasmi (Corner Accents) -->
+                    <div class="absolute top-2.5 left-2.5 w-9 h-9 border-t-[3px] border-l-[3px] border-indigo-900"></div>
+                    <div class="absolute top-2.5 right-2.5 w-9 h-9 border-t-[3px] border-r-[3px] border-indigo-900"></div>
+                    <div class="absolute bottom-2.5 left-2.5 w-9 h-9 border-b-[3px] border-l-[3px] border-indigo-900"></div>
+                    <div class="absolute bottom-2.5 right-2.5 w-9 h-9 border-b-[3px] border-r-[3px] border-indigo-900"></div>
+
+                    <!-- BAHAGIAN ATAS: KEMENTERIAN, LOGO & IDENTITI SEKOLAH -->
+                    <div class="w-full flex flex-col items-center pt-4">
+                        <p style="font-size: 11.5pt; letter-spacing: 0.22em;" class="font-extrabold uppercase text-slate-700 mb-6">
+                            KEMENTERIAN PENDIDIKAN MALAYSIA
+                        </p>
+
+                        <!-- Logo Sekolah Besar & Jelas -->
+                        <div class="p-2 mb-6 flex justify-center items-center">
+                            <img src="${logo}" style="height: 165px; width: auto;" class="object-contain">
+                        </div>
+
+                        <!-- Nama Sekolah -->
+                        <h1 style="font-size: 27pt; line-height: 1.22;" class="font-black uppercase tracking-wide text-slate-950 px-2">
+                            ${escapeAttr(state.profil.namaSekolah)}
+                        </h1>
+
+                        <!-- Kod Sekolah Badge -->
+                        <div class="mt-4 inline-block px-7 py-1.5 rounded-full border-2 border-slate-900 bg-slate-100">
+                            <p style="font-size: 12pt; letter-spacing: 0.14em;" class="font-extrabold text-slate-900">
+                                KOD SEKOLAH: ${escapeAttr(state.profil.kodSekolah)}
+                            </p>
+                        </div>
                     </div>
 
-                    <div class="space-y-4 my-auto">
-                        <h1 class="text-2xl md:text-3xl font-extrabold uppercase tracking-wide text-slate-900">${escapeAttr(state.profil.namaSekolah)}</h1>
-                        <p class="text-sm font-semibold text-slate-600">KOD SEKOLAH: ${escapeAttr(state.profil.kodSekolah)}</p>
-                        <div class="w-24 h-1 bg-indigo-600 mx-auto rounded-full my-4"></div>
-                        <h2 class="text-xl md:text-2xl font-bold text-indigo-950 uppercase">PERANCANGAN STRATEGIK, OPPM & PELAN OPERASI</h2>
-                        <h3 class="text-lg font-bold text-slate-800">PANITIA ${escapeAttr(state.profil.subjek.toUpperCase())}</h3>
-                        <p class="text-base font-semibold text-slate-700">SESI AKADEMIK / TAHUN: ${escapeAttr(state.profil.tahunStrategik)}</p>
+                    <!-- BAHAGIAN TENGAH: TAJUK UTAMA DOKUMEN & PANITIA -->
+                    <div class="w-full my-auto px-2">
+                        <div class="flex items-center justify-center gap-4 mb-6">
+                            <div class="h-[2px] flex-1 bg-slate-800"></div>
+                            <span class="text-indigo-900 text-base">❖</span>
+                            <div class="h-[2px] flex-1 bg-slate-800"></div>
+                        </div>
+
+                        <div class="border-y-[3px] border-slate-900 bg-slate-50 py-7 px-5">
+                            <p style="font-size: 11pt; letter-spacing: 0.22em;" class="font-bold uppercase text-indigo-900 mb-2.5">
+                                DOKUMEN PENGURUSAN KURIKULUM
+                            </p>
+                            <h2 style="font-size: 24pt; line-height: 1.3;" class="font-black text-slate-950 uppercase tracking-tight">
+                                PERANCANGAN STRATEGIK,<br>PELAN OPERASI &amp; PELAN TAKTIKAL
+                            </h2>
+                        </div>
+
+                        <!-- Kotak Nama Panitia Mata Pelajaran -->
+                        <div class="mt-7 bg-indigo-950 text-white border-2 border-slate-900 rounded-xl py-4 px-6">
+                            <h3 style="font-size: 21pt; line-height: 1.25;" class="font-extrabold uppercase tracking-wide">
+                                PANITIA ${escapeAttr(state.profil.subjek.toUpperCase())}
+                            </h3>
+                        </div>
+
+                        <!-- Sesi Akademik / Tahun -->
+                        <div class="mt-6">
+                            <span style="font-size: 15pt; letter-spacing: 0.1em;" class="inline-block font-extrabold text-slate-900 border-b-[3px] border-indigo-800 pb-1 uppercase">
+                                TAHUN: ${escapeAttr(state.profil.tahunStrategik)}
+                            </span>
+                        </div>
                     </div>
 
-                    <div class="w-full text-xs text-slate-500 pt-8 border-t border-slate-200">
-                        <p>Dokumen Pengurusan Rasmi Panitia Mata Pelajaran KPM Standard</p>
+                    <!-- BAHAGIAN BAWAH: FOOTER RASMI KULIT DOKUMEN -->
+                    <div class="w-full pt-4 border-t-2 border-slate-800 text-slate-700">
+                        <p style="font-size: 10.5pt; letter-spacing: 0.08em;" class="font-extrabold uppercase text-slate-900">
+                            Dokumen Pengurusan Rasmi Panitia Mata Pelajaran KPM Standard
+                        </p>
+                        <p style="font-size: 9.5pt;" class="text-slate-600 mt-1 font-medium">
+                            Jawatankuasa Kurikulum Sekolah &bull; ${escapeAttr(state.profil.namaSekolah)}
+                        </p>
                     </div>
                 </div>
 
